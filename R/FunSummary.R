@@ -1,6 +1,6 @@
 savis_nth<- function(x, k) {
   p <- length(x) - k
-  xp <- sort(x, partial=p)[p]
+  xp <- base::sort(x, partial=p)[p]
   which(x > xp)
 }
 
