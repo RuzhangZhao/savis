@@ -1,0 +1,35 @@
+Package: savis
+Type: Package
+Title: Single-cell rna-seq Adaptive VISualization
+Version: 0.1.0
+Authors@R:
+    c(person(given = "Ruzhang", family = "Zhao",
+    role = c("aut", "cre"),
+    email = "ruzhangzhao@gmail.com"),
+    person(given = "Hongkai",
+           family = "Ji",
+           role = "ctb"))
+Maintainer: Ruzhang Zhao <ruzhangzhao@gmail.com>
+Description: This is perfect! More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+Imports: 
+    ggplot2,
+    dplyr,
+    Seurat,
+    reticulate,
+    RColorBrewer,
+    ggrepel,
+    Rfast,
+    pdist,
+    Spectrum,
+    mclust,
+    uwot,
+    glue,
+    methods,
+    cluster,
+    MASS,
+    mize
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.1
