@@ -1261,6 +1261,7 @@ Detect_farthest<-function(
 #' Combined PC embedding with scale factor for subPC
 #'
 #' @importFrom pdist pdist
+#' @importFrom Rfast Dist
 #' @importFrom stats dist as.dist
 #' @importFrom uwot umap
 #'
@@ -1562,9 +1563,9 @@ adjustUMAP_via_umap<-function(
       index_i<-which(cluster_ == label_index_[i])
       set.seed(seed.use)
       sample_index_i<-sample(index_i,min(min_size,length(index_i)) )
-      sample_global_dist<-Rfast::Dist(global_umap_embedding[sample_index_i,])
+      sample_global_dist<-Dist(global_umap_embedding[sample_index_i,])
       #sample_global_dist<-as.matrix(parDist(global_umap_embedding[sample_index_i,]))
-      sample_local_dist<-Rfast::Dist(umap_embedding[sample_index_i,])
+      sample_local_dist<-Dist(umap_embedding[sample_index_i,])
       #sample_local_dist<-as.matrix(parDist(umap_embedding[sample_index_i,]))
       mean(c(sample_global_dist))/mean(c(sample_local_dist))
     })
@@ -1617,7 +1618,7 @@ adjustUMAP_via_umap<-function(
       k = max(1,min(ceiling(min_size/5),length(index_i))))
   })
   
-  pca_dist1<-Rfast::Dist(pca_center)
+  pca_dist1<-Dist(pca_center)
   #pca_dist1<-as.matrix(parDist(pca_center))
   
   step1_res<-get_umap_embedding_adjust_umap(
@@ -2003,6 +2004,7 @@ get_umap_embedding_adjust_tsMDS<-function(
 
 
 #' @importFrom cluster pam
+#' @importFrom Rfast Dist
 adjustUMAP_via_tsMDS<-function(
   pca_embedding,
   umap_embedding,
@@ -2051,9 +2053,9 @@ adjustUMAP_via_tsMDS<-function(
       index_i<-which(cluster_ == label_index[i])
       set.seed(seed.use)
       sample_index_i<-sample(index_i,min(min_size,length(index_i)) )
-      sample_global_dist<-Rfast::Dist(global_umap_embedding[sample_index_i,])
+      sample_global_dist<-Dist(global_umap_embedding[sample_index_i,])
       #sample_global_dist<-as.matrix(parDist(global_umap_embedding[sample_index_i,]))
-      sample_local_dist<-Rfast::Dist(umap_embedding[sample_index_i,])
+      sample_local_dist<-Dist(umap_embedding[sample_index_i,])
       #sample_local_dist<-as.matrix(parDist(umap_embedding[sample_index_i,]))
       mean(c(sample_global_dist))/mean(c(sample_local_dist))
     })
@@ -2086,7 +2088,7 @@ adjustUMAP_via_tsMDS<-function(
     savis_nth(x=sample_index_dist,
       k = max(1,min(ceiling(min_size/5),length(index_i))))
   })
-  pca_dist1<-Rfast::Dist(pca_center)
+  pca_dist1<-Dist(pca_center)
   #pca_dist1<-as.matrix(parDist(pca_center))
   
   pca_dist2<-pca_dist1
@@ -2523,7 +2525,7 @@ ScaleFactor<-function(
   }
   
   # distance matrix for cluster center
-  cluster_center_dist<-Rfast::Dist(cluster_center[,1:npcs])
+  cluster_center_dist<-Dist(cluster_center[,1:npcs])
   #cluster_center_dist<-as.matrix(parDist(cluster_center[,1:npcs]))
   diag(cluster_center_dist)<-NA
   
@@ -2585,7 +2587,7 @@ DoCluster<-function(
     if (verbose){
       print("Finding Neighbors...")
     }
-    snn_<- Seurat::FindNeighbors(object = pc_embedding,
+    snn_<- FindNeighbors(object = pc_embedding,
       nn.method = "rann",
       verbose = verbose_more)$snn
     if (verbose){
@@ -2626,7 +2628,7 @@ DoCluster<-function(
     N_center<-min(1000,num_example%/%5)
     set.seed(42)
     suppressMessages(
-      spectral_eg<-Spectrum::Spectrum(t(
+      spectral_eg<-Spectrum(t(
         as.matrix(pc_embedding)),
         method = 1,showres = verbose_more,
         FASP = T,FASPk = N_center))
@@ -2640,14 +2642,14 @@ DoCluster<-function(
         index_i<-which(cluster_ == i)
         if (length(index_i) > min(100,N_center)){
           suppressMessages(
-            spectral_eg<-Spectrum::Spectrum(t(
+            spectral_eg<-Spectrum(t(
               as.matrix(pc_embedding[index_i,])),
               method = 1,FASP = T,
               FASPk = N_center,
               showres = F))
         }else{
           suppressMessages(
-            spectral_eg<-Spectrum::Spectrum(t(
+            spectral_eg<-Spectrum(t(
               as.matrix(pc_embedding[index_i,])),
               method = 1,FASP = T,
               FASPk = length(index_i)%/%3,
@@ -3427,13 +3429,13 @@ ARIEvaluate<-function(
     }
     if (is.null(fixk)){
       suppressMessages(
-        spectrual_eg<-Spectrum::Spectrum(t(as.matrix(
+        spectrual_eg<-Spectrum(t(as.matrix(
           test_data)),
           method = 1,showres = F,
           FASP = T,FASPk = N_center))
     }else{
       suppressMessages(
-        spectrual_eg<-Spectrum::Spectrum(t(as.matrix(
+        spectrual_eg<-Spectrum(t(as.matrix(
           test_data)),
           method = 3,showres = F,
           FASP = T,FASPk = N_center,fixk = fixk))
