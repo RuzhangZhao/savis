@@ -421,6 +421,10 @@ savis<-function(
         }
       }
       
+      umap_embedding<<-umap_embedding
+      expr_matrix_pca<<-expr_matrix_pca
+      global_cluster_label<<-global_cluster_label
+      
       umap_embedding<-adjustUMAP(
         pca_embedding = expr_matrix_pca,
         umap_embedding = umap_embedding,
