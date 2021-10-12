@@ -1,7 +1,14 @@
 savis_nth<- function(x, k) {
   p <- length(x) - k
-  xp <- base::sort(x, partial=p)[p]
-  which(x > xp)
+  if(p < 0){
+    stop("savis_nth: input k too larger") 
+  }else if(p == 0){
+    res<-x
+  }else{
+    xp <- base::sort(x, partial=p)[p]
+    res<-which(x > xp)
+  }
+  res
 }
 
 #' savis
@@ -2081,6 +2088,7 @@ adjustUMAP_via_tsMDS<-function(
   
   
   pca_anchor_index<-lapply(1:N_label, function(i){
+    message(i)
     index_i<-which(cluster_ == label_index[i])
     set.seed(seed.use)
     sample_index_i<-sample(index_i,min(min_size,length(index_i)) )
