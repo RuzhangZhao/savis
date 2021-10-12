@@ -1716,11 +1716,11 @@ adjustUMAP_via_umap<-function(
     }
     
     if(N_label_1 < length(main_index)){
-      if(verbose){
-        cat('\n')
-        print("Rescaling SAVIS...")
-        setTxtProgressBar(pb = pb, value = 19.5)
-      }
+      #if(verbose){
+      #  cat('\n')
+      #  print("Rescaling SAVIS...")
+      #  setTxtProgressBar(pb = pb, value = 19.5)
+      #}
       ## Third Adjustment Rescale
       for (i in 1:length(bad_index)){
         pos<-min(bad_index[[i]])
@@ -2282,11 +2282,11 @@ adjustUMAP_via_tsMDS<-function(
         
       }
       if(N_label3 < N_label){
-        if(verbose){
-          cat('\n')
-          print("Rescaling SAVIS...")
-          setTxtProgressBar(pb = pb, value = 19.5)
-        }
+        #if(verbose){
+        #  cat('\n')
+        #  print("Rescaling SAVIS...")
+        #  setTxtProgressBar(pb = pb, value = 19.5)
+        #}
         ## Third Adjustment Rescale
         for (i in 1:length(bad_index)){
           pos<-min(bad_index[[i]])
