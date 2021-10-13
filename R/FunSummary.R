@@ -2337,6 +2337,8 @@ adjustUMAP_via_tsMDS<-function(
 #' @importFrom MASS isoMDS
 #' @importFrom stats cmdscale var as.dist dist
 #'
+#' @export
+#' 
 #' @examples
 #' a<-1
 #'
@@ -3351,6 +3353,29 @@ adaDimPlot<-function(
   gg
 }
 
+
+#' adaDimPlot2
+#'
+#' Adaptively Plot the UMAP Embedding
+#'
+#' @details Some details
+#' @param expr_matrix character
+#'
+#' @return nothing useful
+#'
+#' @importFrom RColorBrewer brewer.pal brewer.pal.info
+#' @importFrom dplyr group_by summarise
+#' @importFrom ggrepel geom_text_repel
+#' @importFrom stats median
+#' @import ggplot2
+#'
+#' @export
+#'
+#' @examples
+#' a<-1
+#'
+#'
+#'
 adaDimPlot2<-function(
   umap_embedding,
   label,
@@ -3462,7 +3487,24 @@ ARIEvaluate<-function(
     adjustedRandIndex(cluster_label,label))
 }
 
-
+#' SeuratLPCA
+#'
+#' Get PC matrix of single cell RNAseq matrix using limited memory with Seurat pipline
+#'
+#' @details Some details
+#' @param expr_matrix character
+#'
+#' @return nothing useful
+#'
+#' @importFrom RColorBrewer brewer.pal brewer.pal.info
+#'
+#' @export
+#'
+#' @examples
+#' a<-1
+#'
+#'
+#'
 SeuratLPCA<-function(expr_matrix,assay_for_var_features = "rawcount",npcs=20,nfeatures=2000){
   if ( assay_for_var_features == "rawcount" ){
     expr_matrix_hvg <- FindVariableFeatures(
