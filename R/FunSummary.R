@@ -56,6 +56,7 @@ savis_nth<- function(x, k) {
 #' @importFrom utils setTxtProgressBar txtProgressBar
 #' @importFrom uwot umap
 #' @importFrom MASS isoMDS
+#' @importFrom spatstat.geom print.boxx
 #' @import ggplot2
 #' @import RColorBrewer
 #' @import dplyr
