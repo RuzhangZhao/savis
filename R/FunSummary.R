@@ -3517,7 +3517,7 @@ SeuratLPCA<-function(expr_matrix,assay_for_var_features = "rawcount",npcs=20,nfe
       expr_matrix,
       verbose = F)
     expr_matrix_hvg <- FindVariableFeatures(
-      (expr(expr_matrix)-1),
+      (exp(expr_matrix)-1),
       verbose = F)$vst.variance.standardized
   }else{
     stop("Please select assay_for_var_features from c('rawcount','normalizedcount')")
