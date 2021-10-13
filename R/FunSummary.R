@@ -57,6 +57,7 @@ savis_nth<- function(x, k) {
 #' @importFrom uwot umap
 #' @importFrom MASS isoMDS
 #' @importFrom spatstat.geom print.boxx
+#' @importFrom cluster pam
 #' @import ggplot2
 #' @import RColorBrewer
 #' @import dplyr
@@ -2010,9 +2011,6 @@ get_umap_embedding_adjust_tsMDS<-function(
 
 
 
-
-#' @importFrom cluster pam
-#' @importFrom Rfast Dist
 adjustUMAP_via_tsMDS<-function(
   pca_embedding,
   umap_embedding,
@@ -2089,7 +2087,6 @@ adjustUMAP_via_tsMDS<-function(
   
   
   pca_anchor_index<-lapply(1:N_label, function(i){
-    message(i)
     index_i<-which(cluster_ == label_index[i])
     set.seed(seed.use)
     sample_index_i<-sample(index_i,min(min_size,length(index_i)) )
@@ -2647,7 +2644,7 @@ DoCluster<-function(
       N_cluster<-length(unique(cluster_))
       subcluster_<-rep(NA,length(cluster_))
       for ( i in unique(cluster_)){
-        print(paste0("Processing cluster ",i))
+        #print(paste0("Processing cluster ",i))
         index_i<-which(cluster_ == i)
         if (length(index_i) > min(100,N_center)){
           suppressMessages(
@@ -3190,7 +3187,7 @@ FormAdaptiveCombineList<-function(
       work_adaptive<-TRUE
     }else{
       if(ncol(tmp$combined_embedding)!=npcs){
-        print(ncol(tmp$combined_embedding))
+        #print(ncol(tmp$combined_embedding))
         stop("combined_embedding size is wrong")
       }  
     }
