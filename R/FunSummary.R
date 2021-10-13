@@ -3,7 +3,7 @@ savis_nth<- function(x, k) {
   if(p < 0){
     stop("savis_nth: input k too larger") 
   }else if(p == 0){
-    res<-x
+    res<-1:length(x)
   }else{
     xp <- base::sort(x, partial=p)[p]
     res<-which(x > xp)
@@ -1930,6 +1930,7 @@ get_umap_embedding_adjust_tsMDS<-function(
         pos = i) 
       
       angle_vec<-sapply(1:length(pca_anchor_index[[i]]), function(j){
+        message(j)
         y<-as.numeric(pca_embedding[pca_anchor_index[[i]][j],c(1,2)]-pca_center[i,c(1,2)])%*%R2to1
         y<-as.numeric(y)
         y<-y/sqrt(sum(y^2))
@@ -2010,7 +2011,9 @@ get_umap_embedding_adjust_tsMDS<-function(
 }
 
 
-
+#' @importFrom Seurat FindNeighbors FindClusters
+#' @importFrom pdist pdist
+#' @importFrom 
 adjustUMAP_via_tsMDS<-function(
   pca_embedding,
   umap_embedding,
