@@ -1930,7 +1930,6 @@ get_umap_embedding_adjust_tsMDS<-function(
         pos = i) 
       
       angle_vec<-sapply(1:length(pca_anchor_index[[i]]), function(j){
-        message(j)
         y<-as.numeric(pca_embedding[pca_anchor_index[[i]][j],c(1,2)]-pca_center[i,c(1,2)])%*%R2to1
         y<-as.numeric(y)
         y<-y/sqrt(sum(y^2))
