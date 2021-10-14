@@ -1,4 +1,5 @@
 savis_nth<- function(x, k) {
+  x[is.na(x)]<-min(x[!is.na(x)])-0.1
   p <- length(x) - k
   if(p < 0){
     stop("savis_nth: input k too larger") 
