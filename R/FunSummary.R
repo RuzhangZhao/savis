@@ -43,7 +43,6 @@
 #' @importFrom utils setTxtProgressBar txtProgressBar
 #' @importFrom uwot umap
 #' @importFrom MASS isoMDS
-#' @importFrom cli print.boxx
 #' @importFrom cluster pam
 #' @import ggplot2
 #' @import RColorBrewer
@@ -858,7 +857,9 @@ savis_nth<- function(x, k) {
   }
   res
 }
-
+print.boxx<-function(x){
+  print(x)
+}
 #' @importFrom Seurat FindVariableFeatures
 ExpFindVariableFeatures<-function(expr_matrix,verbose=F){
   if (!inherits(x = expr_matrix, 'Matrix')) {
