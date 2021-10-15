@@ -1,17 +1,3 @@
-savis_nth<- function(x, k) {
-  x[is.na(x)]<-min(x[!is.na(x)])-0.1
-  p <- length(x) - k
-  if(p < 0){
-    stop("savis_nth: input k too larger") 
-  }else if(p == 0){
-    res<-1:length(x)
-  }else{
-    xp <- base::sort(x, partial=p)[p]
-    res<-which(x > xp)
-  }
-  res
-}
-
 #' savis
 #'
 #' savis: single-cell RNAseq adaptive visualiztaion
@@ -101,6 +87,12 @@ savis<-function(
   compressed_storage = TRUE,
   seed.use = 42L
 ){
+  if (!inherits(x = expr_matrix, 'Matrix')) {
+    expr_matrix <- as(object = as.matrix(x = expr_matrix), Class = 'Matrix')
+  }
+  if (!inherits(x = expr_matrix, what = 'dgCMatrix')) {
+    expr_matrix <- as(object = expr_matrix, Class = 'dgCMatrix')
+  }
   # change the seed.use to be integer
   if(!is.integer(seed.use)){
     seed.use<-as.integer(seed.use)
@@ -157,9 +149,10 @@ savis<-function(
       print("Finding Variable Features...")
       setTxtProgressBar(pb = pb, value = 1)
     }
-    expr_matrix_hvg <- FindVariableFeatures(
-      (exp(expr_matrix)-1),
-      verbose = verbose_more)$vst.variance.standardized
+   
+    expr_matrix_hvg <- ExpFindVariableFeatures(
+      expr_matrix,
+      verbose = verbose_more)
   }else if (is_count_matrix & assay_for_var_features == "rawcount"){
     if(verbose){
       cat('\n')
@@ -186,9 +179,9 @@ savis<-function(
       print("Finding Variable Features...")
       setTxtProgressBar(pb = pb, value = 1)
     }
-    expr_matrix_hvg <- FindVariableFeatures(
-      (exp(expr_matrix)-1),
-      verbose = verbose_more)$vst.variance.standardized
+    expr_matrix_hvg <- ExpFindVariableFeatures(
+      expr_matrix,
+      verbose = verbose_more)
   }
   
   hvg<-savis_nth(x = expr_matrix_hvg,
@@ -849,6 +842,36 @@ RunSAVIS<-function(
 }
 
 
+savis_nth<- function(x, k) {
+  if(sum(is.na(x))>0){
+    x[is.na(x)]<-min(x[!is.na(x)])-0.1
+  }
+  ## might have problem when k is too large for nan case
+  p <- length(x) - k
+  if(p < 0){
+    stop("savis_nth: input k too larger") 
+  }else if(p == 0){
+    res<-1:length(x)
+  }else{
+    xp <- base::sort(x, partial=p)[p]
+    res<-which(x > xp)
+  }
+  res
+}
+
+#' @importFrom Seurat FindVariableFeatures
+ExpFindVariableFeatures<-function(expr_matrix,verbose=F){
+  if (!inherits(x = expr_matrix, 'Matrix')) {
+    expr_matrix <- as(object = as.matrix(x = expr_matrix), Class = 'Matrix')
+  }
+  if (!inherits(x = expr_matrix, what = 'dgCMatrix')) {
+    expr_matrix <- as(object = expr_matrix, Class = 'dgCMatrix')
+  }
+  expr_matrix@x<-exp(expr_matrix@x)-1
+  FindVariableFeatures(
+    expr_matrix,
+    verbose = verbose)$vst.variance.standardized
+}
 
 #' RunAdaUMAP
 #'
@@ -2732,8 +2755,8 @@ SubPCEmbedding<-function(
       expr_tmp_hvg <- FindVariableFeatures(
         expr_tmp,verbose = F)$vst.variance.standardized
     }else if(assay_for_var_features == "normalizedcount"){
-      expr_tmp_hvg <- FindVariableFeatures(
-        (exp(expr_tmp)-1),verbose = F)$vst.variance.standardized
+      expr_tmp_hvg <- ExpFindVariableFeatures(
+        expr_tmp,verbose = F)
     }else{
       stop("Please select assay_for_var_features from c('rawcount','normalizedcount')")
     }
@@ -3517,8 +3540,8 @@ SeuratLPCA<-function(expr_matrix,assay_for_var_features = "rawcount",npcs=20,nfe
     expr_matrix<-NormalizeData(
       expr_matrix,
       verbose = F)
-    expr_matrix_hvg <- FindVariableFeatures(
-      (exp(expr_matrix)-1),
+    expr_matrix_hvg <- ExpFindVariableFeatures(
+      expr_matrix,
       verbose = F)$vst.variance.standardized
   }else{
     stop("Please select assay_for_var_features from c('rawcount','normalizedcount')")
