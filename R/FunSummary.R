@@ -859,7 +859,7 @@ savis_nth<- function(x, k) {
 }
 
 #' @importFrom Seurat FindVariableFeatures
-#' @importFrom cli print.boxx
+#' @importFrom cli boxx
 ExpFindVariableFeatures<-function(expr_matrix,verbose=F){
   if (!inherits(x = expr_matrix, 'Matrix')) {
     expr_matrix <- as(object = as.matrix(x = expr_matrix), Class = 'Matrix')
