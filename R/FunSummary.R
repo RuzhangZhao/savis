@@ -43,7 +43,7 @@
 #' @importFrom utils setTxtProgressBar txtProgressBar
 #' @importFrom uwot umap
 #' @importFrom MASS isoMDS
-#' @importFrom spatstat.geom print.boxx
+#' @importFrom cli print.boxx
 #' @importFrom cluster pam
 #' @import ggplot2
 #' @import RColorBrewer
