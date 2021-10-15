@@ -28,8 +28,7 @@ Imports:
     methods,
     cluster,
     MASS,
-    mize,
-    cli
+    mize
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
