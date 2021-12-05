@@ -5,17 +5,16 @@
 #' @details This function argument to the function
 #'
 #' @param expr_matrix The expression matrix: gene(feature) as row; cell(sample) as column.
-#' @param assay_for_var_features 
 #' @param is_count_matrix Whether expr_matrix is count matrix or normalized version. If the expression matrix is count matrix, normalization will be performed. Default is TRUE.
-#' @param npcs The number of principle components will be computed. Default is 20.
+#' @param assay_for_var_features The assay we use to select highly variable genes. Select from c("rawcount","normalizedcount"). Default is "rawcount".
+#' @param npcs The number of principle components will be computed as the initialization input of nonlinear low dimensional embeddings. Default is 20.
 #' @param nfeatures The number of highly variable genes will be selected. Default is 2000.
-#' @param distance_metric The default is "euclidean". 
+#' @param distance_metric The default is "euclidean". Recommend to use "euclidean" because we need to distinguish between global distance and local distance. 
 #' @param cluster_method The default is "louvain". User can choose from c("louvain","spectral"). But "louvain" performs much better.
-#' @param resolution The resolution for The default is 0.5.
-#' @param resolution_sub The default is 0.
-#' @param memory_save The default is FALSE. This function will take some storage to temporarily save the data from memory. Don't worry. SAVIS will soon delete it!!! Also, SAVIS uses unique name for the temporary data to keep everything safe!!!
-#' @param adaptive The default is FALSE.
-#' @param max_stratification The default is 3.
+#' @param resolution The resolution for the louvain clustering. The resolution ranges from 0 to 1. The lower resolution means conservative clustering(smaller number of clusters), while the higher resolution means aggressive clustering. The default is 0.5.
+#' @param resolution_sub The resolution for the louvain clustering within subclusters, which means after the first step clustering and separation, we perform further clustering. The default is 0 because we are mainly interested in one step separation. 
+#' @param adaptive Whether we will run adaptive visualization. If adaptive is FALSE, we are just doing UMAP. The default is TRUE.
+#' @param max_stratification Restrict the The default is 3.
 #' @param scale_factor_separation The default is 3.
 #' @param process_min_size The default is NULL.
 #' @param process_min_count The default is NULL.
@@ -63,7 +62,7 @@ savis<-function(
   cluster_method = "louvain",
   resolution = 0.5,
   resolution_sub = 0,
-  memory_save = FALSE,
+  #memory_save = FALSE,
   adaptive = TRUE,
   max_stratification = 3,
   scale_factor_separation =3,
