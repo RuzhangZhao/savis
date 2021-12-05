@@ -14,8 +14,8 @@
 #' @param resolution The resolution for the louvain clustering. The resolution ranges from 0 to 1. The lower resolution means conservative clustering(smaller number of clusters), while the higher resolution means aggressive clustering. The default is 0.5.
 #' @param resolution_sub The resolution for the louvain clustering within subclusters, which means after the first step clustering and separation, we perform further clustering. The default is 0 because we are mainly interested in one step separation. 
 #' @param adaptive Whether we will run adaptive visualization. If adaptive is FALSE, we are just doing UMAP. The default is TRUE.
-#' @param max_stratification Restrict the The default is 3.
-#' @param scale_factor_separation The default is 3.
+#' @param max_stratification The maximum level of stratification for subclustering. Set the maximum level to restrict too detailed exploration. The default is 3.
+#' @param scale_factor_separation Scale factor used to distinguish global distance and local distance. The default is 3.
 #' @param process_min_size The default is NULL.
 #' @param process_min_count The default is NULL.
 #' @param run_adaUMAP The default is TRUE.
