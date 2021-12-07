@@ -16,9 +16,9 @@
 #' @param adaptive Whether we will run adaptive visualization. If adaptive is FALSE, we are just doing UMAP. The default is TRUE.
 #' @param max_stratification The maximum level of stratification for subclustering. Set the maximum level to restrict too detailed exploration. The default is 3.
 #' @param scale_factor_separation Scale factor used to distinguish global distance and local distance. The default is 3.
-#' @param process_min_size The default is NULL.
-#' @param process_min_count The default is NULL.
-#' @param run_adaUMAP The default is TRUE.
+#' @param process_min_size The smallest size of cluster which we use to stop the process of subcluster evaluation. The clusters whose sizes are less than the cutoff will be not be further explored. The default is NULL.
+#' @param process_min_count The processed clusters are determined by the ranking of the size of clusters. Only further explore the clusters whose rankings are less than the process_min_count. The default is NULL.
+#' @param run_adaUMAP Whether we run the adaptive visualization. If the criterion is The default is TRUE.
 #' @param adjust_UMAP The default is TRUE.
 #' @param adjust_method The default is "all". Select from c("umap","mds").
 #' @param adjust_rotate The default is TRUE.
