@@ -3320,6 +3320,7 @@ adaDimPlot<-function(
   pt.size=0,
   show.legend=TRUE,
   seed.use = 42,
+  text = TRUE,
   color.mode = 1
 ){
   set.seed(seed.use)
@@ -3369,11 +3370,12 @@ adaDimPlot<-function(
   centers<-group_by(umap_embedding,label)
   centers<-summarise(centers,x = median(x = UMAP_1),
     y = median(x = UMAP_2),.groups = 'drop')
-  
-  gg <- gg +
-    geom_text_repel(data = centers,
-      mapping = aes(x = x, y = y,
-        label = label), size = 4,max.overlaps = 100)
+  if(text){
+    gg <- gg +
+      geom_text_repel(data = centers,
+        mapping = aes(x = x, y = y,
+          label = label), size = 4,max.overlaps = 100)
+  }
   gg
 }
 
