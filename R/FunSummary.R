@@ -861,7 +861,6 @@ print.boxx<-function(){}
 
 #' @importFrom Seurat FindVariableFeatures
 ExpFindVariableFeatures<-function(expr_matrix,verbose=F){
-  print.boxx()
   if (!inherits(x = expr_matrix, 'Matrix')) {
     expr_matrix <- as(object = as.matrix(x = expr_matrix), Class = 'Matrix')
   }
