@@ -3343,6 +3343,9 @@ adaDimPlot<-function(
   if(color.mode==1){
     col_vector <- unique(col_vector)
     col_vector[4]<-"#ffd000" 
+  }else if (color.mode==2){
+    col_vector <- unique(col_vector)
+    col_vector <- col_vector[-4] 
   }
   cpnum<-length(unique(label))%/%length(col_vector)+1
   col_vector<-rep(col_vector,cpnum)
@@ -3359,9 +3362,12 @@ adaDimPlot<-function(
       legend.key=element_blank())+
     guides(color = guide_legend(override.aes =
         list(size=3)))+
-    labs(x = xynames[1],y=xynames[2])+
-    scale_colour_manual(values =
-        col_vector[c(1:length(unique(label)))])
+    labs(x = xynames[1],y=xynames[2])
+  if(color.mode %in% c(1,2)){
+    gg<-gg+
+      scale_colour_manual(values =
+                            col_vector[c(1:length(unique(label)))]) 
+  }
   if (!show.legend){
     gg<-gg+theme(legend.position="none")
   }
@@ -3402,9 +3408,11 @@ adaDimPlot<-function(
 #'
 #'
 adaDimPlot2<-function(
-  umap_embedding,
-  label,
-  pt.size=0
+    umap_embedding,
+    label,
+    pt.size=0,
+    show.legend=TRUE,
+    scale_color=c("grey","blue")
 ){
   set.seed(42)
   shuffle_index<-sample(1:nrow(umap_embedding))
@@ -3422,18 +3430,21 @@ adaDimPlot2<-function(
   
   gg<-ggplot(umap_embedding)+
     geom_point(aes(x = UMAP_1,
-      y = UMAP_2,
-      color = label),
-      size = pt.size)+
+                   y = UMAP_2,
+                   color = label),
+               size = pt.size)+
     theme(legend.title = element_blank())+
     theme(panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      panel.background = element_blank(),
-      axis.line = element_line(colour = "black"),
-      legend.key=element_blank())+
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          axis.line = element_line(colour = "black"),
+          legend.key=element_blank())+
     #scale_colour_gradientn(colors=rainbow(15)[c(12:1,14,15)])+
-    scale_colour_gradientn(colors=c("grey", "red","black"))+
-  labs(x = xynames[1],y=xynames[2])
+    scale_colour_gradientn(colors=c(scale_color))+
+    labs(x = xynames[1],y=xynames[2])
+  if (!show.legend){
+    gg<-gg+theme(legend.position="none")
+  }
   gg
 }
 
