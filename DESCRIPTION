@@ -1,7 +1,7 @@
 Package: savis
 Type: Package
 Title: Single-cell rna-seq Adaptive VISualization
-Version: 0.1.0
+Version: 0.1.1
 Authors@R:
     c(person(given = "Ruzhang", family = "Zhao",
     role = c("aut", "cre"),
