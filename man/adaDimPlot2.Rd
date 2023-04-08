@@ -4,7 +4,13 @@
 \alias{adaDimPlot2}
 \title{adaDimPlot2}
 \usage{
-adaDimPlot2(umap_embedding, label, pt.size = 0)
+adaDimPlot2(
+  umap_embedding,
+  label,
+  pt.size = 0,
+  show.legend = TRUE,
+  scale_color = c("grey", "blue")
+)
 }
 \arguments{
 \item{expr_matrix}{character}

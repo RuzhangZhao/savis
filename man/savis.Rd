@@ -12,9 +12,8 @@ savis(
   nfeatures = 2000,
   distance_metric = "euclidean",
   cluster_method = "louvain",
-  resolution = 0.5,
+  resolution = 0.1,
   resolution_sub = 0,
-  memory_save = FALSE,
   adaptive = TRUE,
   max_stratification = 3,
   scale_factor_separation = 3,
@@ -43,33 +42,31 @@ savis(
 
 \item{is_count_matrix}{Whether expr_matrix is count matrix or normalized version. If the expression matrix is count matrix, normalization will be performed. Default is TRUE.}
 
-\item{assay_for_var_features}{}
+\item{assay_for_var_features}{The assay we use to select highly variable genes. Select from c("rawcount","normalizedcount"). Default is "rawcount".}
 
-\item{npcs}{The number of principle components will be computed. Default is 20.}
+\item{npcs}{The number of principle components will be computed as the initialization input of nonlinear low dimensional embeddings. Default is 20.}
 
 \item{nfeatures}{The number of highly variable genes will be selected. Default is 2000.}
 
-\item{distance_metric}{The default is "euclidean".}
+\item{distance_metric}{The default is "euclidean". Recommend to use "euclidean" because we need to distinguish between global distance and local distance.}
 
 \item{cluster_method}{The default is "louvain". User can choose from c("louvain","spectral"). But "louvain" performs much better.}
 
-\item{resolution}{The resolution for The default is 0.5.}
+\item{resolution}{The resolution for the louvain clustering. The resolution ranges from 0 to 1. The lower resolution means conservative clustering(smaller number of clusters), while the higher resolution means aggressive clustering. The default is 0.5.}
 
-\item{resolution_sub}{The default is 0.}
+\item{resolution_sub}{The resolution for the louvain clustering within subclusters, which means after the first step clustering and separation, we perform further clustering. The default is 0 because we are mainly interested in one step separation.}
 
-\item{memory_save}{The default is FALSE. This function will take some storage to temporarily save the data from memory. Don't worry. SAVIS will soon delete it!!! Also, SAVIS uses unique name for the temporary data to keep everything safe!!!}
+\item{adaptive}{Whether we will run adaptive visualization. If adaptive is FALSE, we are just doing UMAP. The default is TRUE.}
 
-\item{adaptive}{The default is FALSE.}
+\item{max_stratification}{The maximum level of stratification for subclustering. Set the maximum level to restrict too detailed exploration. The default is 3.}
 
-\item{max_stratification}{The default is 3.}
+\item{scale_factor_separation}{Scale factor used to distinguish global distance and local distance. The default is 3.}
 
-\item{scale_factor_separation}{The default is 3.}
+\item{process_min_size}{The smallest size of cluster which we use to stop the process of subcluster evaluation. The clusters whose sizes are less than the cutoff will be not be further explored. The default is NULL.}
 
-\item{process_min_size}{The default is NULL.}
+\item{process_min_count}{The processed clusters are determined by the ranking of the size of clusters. Only further explore the clusters whose rankings are less than the process_min_count. The default is NULL.}
 
-\item{process_min_count}{The default is NULL.}
-
-\item{run_adaUMAP}{The default is TRUE.}
+\item{run_adaUMAP}{Whether we run the adaptive visualization. If the criterion is The default is TRUE.}
 
 \item{adjust_UMAP}{The default is TRUE.}
 

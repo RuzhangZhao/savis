@@ -10,6 +10,7 @@ adaDimPlot(
   pt.size = 0,
   show.legend = TRUE,
   seed.use = 42,
+  text = TRUE,
   color.mode = 1
 )
 }
