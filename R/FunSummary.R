@@ -60,7 +60,7 @@ savis<-function(
   nfeatures = 2000,
   distance_metric = "euclidean",
   cluster_method = "louvain",
-  resolution = 0.5,
+  resolution = 0.1,
   resolution_sub = 0,
   #memory_save = FALSE,
   adaptive = TRUE,
@@ -948,7 +948,6 @@ RunAdaUMAP<-function(
 import numba 
 import numpy as np
 import warnings
-numba.set_num_threads(16)
 from umap import distances as dist
 py_metric='{metric}' 
 py_dist = dist.named_distances_with_gradients[py_metric]
