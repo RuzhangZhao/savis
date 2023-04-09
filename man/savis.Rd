@@ -38,11 +38,13 @@ savis(
 )
 }
 \arguments{
-\item{expr_matrix}{The expression matrix: gene(feature) as row; cell(sample) as column.}
+\item{expr_matrix}{The expression COUNT matrix: gene(feature) as row; cell(sample) as column.}
 
 \item{npcs}{The number of principle components will be computed as the initialization input of nonlinear low dimensional embeddings. Default is 20.}
 
 \item{nfeatures}{The number of highly variable genes will be selected. Default is 2000.}
+
+\item{hvg_method}{High Variable Gene Selection Method. Refer to manual of package 'mixhvg' and its function FindVariableFeaturesMix.}
 
 \item{distance_metric}{The default is "euclidean". Recommend to use "euclidean" because we need to distinguish between global distance and local distance.}
 
@@ -68,9 +70,17 @@ savis(
 
 \item{adjust_method}{The default is "all". Select from c("umap","mds").}
 
-\item{adjust_rotate}{The default is TRUE.}
+\item{adjust_rotate}{Adjust the rotation of each cluster. The default is TRUE.}
 
-\item{shrink_distance}{The default is TRUE.}
+\item{shrink_distance}{Shrink distance of small clusters to avoid too much space in plot. The default is TRUE.}
+
+\item{density_adjust}{Adjust density of plot. The default is TRUE.}
+
+\item{density_adjust_via_global_umap}{Do density adjustment using the density from UMAP to make it comparable.}
+
+\item{adjust_scale_factor}{Scale factor for adjustment. The default is 0.9. The smaller value (>0) means larger illustration of clusters.}
+
+\item{global_umap_embedding}{The default is NULL.}
 
 \item{check_differential}{The default is FALSE.}
 
@@ -80,13 +90,13 @@ savis(
 
 \item{return_cluster}{The default is FALSE.}
 
-\item{verbose_more}{The default is FALSE.}
+\item{return_combined_PC}{The default is FALSE.}
+
+\item{verbose_more}{More details are displayed. The default is FALSE.}
+
+\item{compressed_storage}{Whether compress storage when returning. The default is FALSE.}
 
 \item{seed.use}{The default is 42L}
-
-\item{is_count_matrix}{Whether expr_matrix is count matrix or normalized version. If the expression matrix is count matrix, normalization will be performed. Default is TRUE.}
-
-\item{assay_for_var_features}{The assay we use to select highly variable genes. Select from c("rawcount","normalizedcount"). Default is "rawcount".}
 }
 \value{
 nothing useful

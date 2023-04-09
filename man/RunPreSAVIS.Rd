@@ -9,7 +9,7 @@ RunPreSAVIS(
   hvg_method = NULL,
   distance_metric = "euclidean",
   cluster_method = "louvain",
-  resolution = 0.5,
+  resolution = 0.1,
   resolution_sub = 0,
   adaptive = TRUE,
   max_stratification = 3,
