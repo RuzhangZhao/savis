@@ -1,5 +1,5 @@
 #if(require("pacman")){installed.packages("pacman")}
-#pacman::p_load(Seurat,uwot,MASS,cluster,mixhvg,ggplot2,dplyr,Rfast,mize,glue,pdist,reticulate)
+# pacman::p_load(Seurat,uwot,MASS,cluster,mixhvg,ggplot2,dplyr,Rfast,mize,glue,pdist,reticulate,RColorBrewer,ggrepel)
 #' savis
 #'
 #' savis: single-cell RNAseq adaptive visualiztaion
