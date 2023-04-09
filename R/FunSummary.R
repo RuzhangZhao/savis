@@ -795,7 +795,7 @@ savis_nth<- function(x, k) {
   }else if(p == 0){
     res<-1:length(x)
   }else{
-    xp <- base::sort(x, partial=p)[p]
+    xp <- sort(x, partial=p)[p]
     res<-which(x > xp)
   }
   res

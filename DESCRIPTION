@@ -1,6 +1,6 @@
 Package: savis
 Type: Package
-Title: Single-cell rna-seq Adaptive VISualization
+Title: Single-cell rna-seq Adaptive VISualization (SAVIS)
 Version: 0.1.1
 Authors@R:
     c(person(given = "Ruzhang", family = "Zhao",
@@ -28,7 +28,8 @@ Imports:
     methods,
     cluster,
     MASS,
-    mize
+    mize,
+    mixhvg
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
