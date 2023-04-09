@@ -1,14 +1,15 @@
+if(require("pacman")){installed.packages("pacman")}
+pacman::p_load(Seurat,uwot,MASS,cluster,mixhvg,ggplot2,dplyr,Rfast,mize,glue,pdist,reticulate)
 #' savis
 #'
 #' savis: single-cell RNAseq adaptive visualiztaion
 #'
 #' @details This function argument to the function
 #'
-#' @param expr_matrix The expression matrix: gene(feature) as row; cell(sample) as column.
-#' @param is_count_matrix Whether expr_matrix is count matrix or normalized version. If the expression matrix is count matrix, normalization will be performed. Default is TRUE.
-#' @param assay_for_var_features The assay we use to select highly variable genes. Select from c("rawcount","normalizedcount"). Default is "rawcount".
+#' @param expr_matrix The expression COUNT matrix: gene(feature) as row; cell(sample) as column.
 #' @param npcs The number of principle components will be computed as the initialization input of nonlinear low dimensional embeddings. Default is 20.
 #' @param nfeatures The number of highly variable genes will be selected. Default is 2000.
+#' @param hvg_method High Variable Gene Selection Method. Refer to manual of package 'mixhvg' and its function FindVariableFeaturesMix.
 #' @param distance_metric The default is "euclidean". Recommend to use "euclidean" because we need to distinguish between global distance and local distance.
 #' @param cluster_method The default is "louvain". User can choose from c("louvain","spectral"). But "louvain" performs much better.
 #' @param resolution The resolution for the louvain clustering. The resolution ranges from 0 to 1. The lower resolution means conservative clustering(smaller number of clusters), while the higher resolution means aggressive clustering. The default is 0.5.
@@ -21,13 +22,19 @@
 #' @param run_adaUMAP Whether we run the adaptive visualization. If the criterion is The default is TRUE.
 #' @param adjust_UMAP The default is TRUE.
 #' @param adjust_method The default is "all". Select from c("umap","mds").
-#' @param adjust_rotate The default is TRUE.
-#' @param shrink_distance The default is TRUE.
+#' @param adjust_rotate Adjust the rotation of each cluster. The default is TRUE.
+#' @param shrink_distance Shrink distance of small clusters to avoid too much space in plot. The default is TRUE.
+#' @param density_adjust Adjust density of plot. The default is TRUE.
+#' @param density_adjust_via_global_umap Do density adjustment using the density from UMAP to make it comparable.
+#' @param adjust_scale_factor Scale factor for adjustment. The default is 0.9. The smaller value (>0) means larger illustration of clusters.
+#' @param global_umap_embedding The default is NULL.
 #' @param check_differential The default is FALSE.
 #' @param verbose The default is TRUE.
+#' @param verbose_more More details are displayed. The default is FALSE.
 #' @param show_cluster The default is FALSE.
 #' @param return_cluster The default is FALSE.
-#' @param verbose_more The default is FALSE.
+#' @param return_combined_PC The default is FALSE.
+#' @param compressed_storage Whether compress storage when returning. The default is FALSE.
 #' @param seed.use The default is 42L
 #'
 #'
@@ -466,7 +473,7 @@ RunPreSAVIS<-function(
   hvg_method = NULL,
   distance_metric = "euclidean",
   cluster_method = "louvain",
-  resolution = 0.5,
+  resolution = 0.1,
   resolution_sub = 0,
   adaptive = TRUE,
   max_stratification = 3,
@@ -638,12 +645,15 @@ RunPreSAVIS<-function(
   }
 
   setClass("savis_class", representation(
+    cell.embeddings = "matrix",
     combined_embedding = "matrix",
     cluster_label = "numeric",
     global_cluster_label = "numeric",
     savis_embedding = "matrix",
     distance_metric = "character",
-    metric_count = "numeric"))
+    metric_count = "numeric",
+    cell.embeddings.tsMDS.adjust = "matrix",
+    cell.embeddings.umap.adjust = "matrix"))
   savis_pre <- new("savis_class",
     combined_embedding = as.matrix(combined_embedding),
     cluster_label = cluster_label,
@@ -725,7 +735,7 @@ RunSAVIS<-function(
   if(verbose){
     cat('\n')
     print("Running SAVIS with Adaptive Settings...")
-    setTxtProgressBar(pb = pb, value = 1)
+    setTxtProgressBar(pb = pb, value = 3)
   }
   #print(metric_count)
   savis_embedding<-RunAdaUMAP(
@@ -756,7 +766,15 @@ RunSAVIS<-function(
       rotate = adjust_rotate,
       seed.use = seed.use)
   }
-  object@reductions$savis@savis_embedding<-savis_embedding
+  print("stop sign")
+  savis_embedding2<<-savis_embedding
+  objjj<<-object
+  if(adjust_method != "all"){
+    object@reductions$savis@cell.embeddings<-savis_embedding
+  }else{
+    object@reductions$savis@cell.embeddings<-savis_embedding$tsMDS
+    object@reductions$savis@cell.embeddings.umap.adjust<-savis_embedding$umap
+  }
   if(verbose){
     cat('\n')
     print("Finished...")
@@ -1084,6 +1102,8 @@ tsMDS<-function(
     return(tsMDS_res)
   }else if(length(remain_index) == 1){
     remain_initial<-c(0,0)
+  }else if(length(remain_index) == 2){
+    remain_initial<-matrix(rep(0,4),2,2)
   }else{
     dist_remain<-dist_full[remain_index,remain_index]
     remain_initial<-cmdscale(dist(dist_remain),k=2)
@@ -3078,6 +3098,160 @@ FormAdaptiveCombineList<-function(
 
 
 
+#' DimPlot1
+#'
+#' Adaptively Plot the UMAP Embedding
+#'
+#' @details Some details
+#' @param expr_matrix character
+#'
+#' @return nothing useful
+#'
+#' @importFrom RColorBrewer brewer.pal brewer.pal.info
+#' @importFrom dplyr group_by summarise
+#' @importFrom ggrepel geom_text_repel
+#' @importFrom stats median
+#' @import ggplot2
+#'
+#' @export
+#'
+#' @examples
+#' a<-1
+#'
+#'
+#'
+DimPlot1<-function(
+    embedding,
+    group.by,
+    axis.name="SAVIS",
+    pt.size=0,
+    show.legend=TRUE,
+    seed.use = 42,
+    text = TRUE,
+    color.mode = 1
+){
+  label = group.by
+  if(ncol(embedding)>2){
+    embedding<-embedding[,1:2]
+  }
+  set.seed(seed.use)
+  shuffle_index<-sample(1:nrow(embedding))
+  embedding<-embedding[shuffle_index,]
+  label<-label[shuffle_index]
+
+  embedding<-data.frame(embedding)
+  xynames<-paste0(axis.name,"_",1:2)
+  colnames(embedding)<-paste0("SAVIS_",1:2)
+  embedding$label<-factor(label)
+
+  qual_col_pals <- brewer.pal.info[brewer.pal.info$category == 'qual',]
+  col_vector <- unlist(mapply(brewer.pal,
+                              qual_col_pals$maxcolors,rownames(qual_col_pals)))
+  if(color.mode==1){
+    col_vector <- unique(col_vector)
+    col_vector[4]<-"#ffd000"
+  }else if (color.mode==2){
+    col_vector <- unique(col_vector)
+    col_vector <- col_vector[-4]
+  }
+  cpnum<-length(unique(label))%/%length(col_vector)+1
+  col_vector<-rep(col_vector,cpnum)
+  gg<-ggplot(embedding)+
+    geom_point(aes(x = SAVIS_1,
+                   y = SAVIS_2,
+                   color = label),
+               size = pt.size)+
+    theme(legend.title = element_blank())+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          axis.line = element_line(colour = "black"),
+          legend.key=element_blank())+
+    guides(color = guide_legend(override.aes =
+                                  list(size=3)))+
+    labs(x = xynames[1],y=xynames[2])
+  if(color.mode %in% c(1,2)){
+    gg<-gg+
+      scale_colour_manual(values =
+                            col_vector[c(1:length(unique(label)))])
+  }
+  if (!show.legend){
+    gg<-gg+theme(legend.position="none")
+  }
+
+  centers<-group_by(embedding,label)
+  centers<-summarise(centers,x = median(x = SAVIS_1),
+                     y = median(x = SAVIS_2),.groups = 'drop')
+  if(text){
+    gg <- gg +
+      geom_text_repel(data = centers,
+                      mapping = aes(x = x, y = y,
+                                    label = label), size = 4,max.overlaps = 100)
+  }
+  gg
+}
+
+
+#' DimPlot2
+#'
+#' Adaptively Plot the UMAP Embedding
+#'
+#' @details Some details
+#' @param expr_matrix character
+#'
+#' @return nothing useful
+#'
+#' @importFrom RColorBrewer brewer.pal brewer.pal.info
+#' @importFrom dplyr group_by summarise
+#' @importFrom ggrepel geom_text_repel
+#' @importFrom stats median
+#' @import ggplot2
+#'
+#' @export
+#'
+#' @examples
+#' a<-1
+#'
+#'
+#'
+DimPlot2<-function(
+    embedding,
+    group.by,
+    axis.name="SAVIS",
+    pt.size=0,
+    show.legend=TRUE,
+    scale_color=c("grey","blue")
+){
+  set.seed(42)
+  label = group.by
+  shuffle_index<-sample(1:nrow(embedding))
+  embedding<-embedding[shuffle_index,]
+  label<-label[shuffle_index]
+  embedding<-data.frame(embedding)
+  xynames<-paste0(axis.name,"_",1:2)
+  colnames(embedding)<-paste0("SAVIS_",1:2)
+  embedding$label<-label
+
+  gg<-ggplot(embedding)+
+    geom_point(aes(x = SAVIS_1,
+                   y = SAVIS_2,
+                   color = label),
+               size = pt.size)+
+    theme(legend.title = element_blank())+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          axis.line = element_line(colour = "black"),
+          legend.key=element_blank())+
+    #scale_colour_gradientn(colors=rainbow(15)[c(12:1,14,15)])+
+    scale_colour_gradientn(colors=c(scale_color))+
+    labs(x = xynames[1],y=xynames[2])
+  if (!show.legend){
+    gg<-gg+theme(legend.position="none")
+  }
+  gg
+}
+
 #' adaDimPlot
 #'
 #' Adaptively Plot the UMAP Embedding
@@ -3101,139 +3275,56 @@ FormAdaptiveCombineList<-function(
 #'
 #'
 adaDimPlot<-function(
-  umap_embedding,
-  label,
-  pt.size=0,
-  show.legend=TRUE,
-  seed.use = 42,
-  text = TRUE,
-  color.mode = 1
-){
-  set.seed(seed.use)
-  shuffle_index<-sample(1:nrow(umap_embedding))
-  umap_embedding<-umap_embedding[shuffle_index,]
-  label<-label[shuffle_index]
-
-  umap_embedding<-data.frame(umap_embedding)
-  if(is.null(colnames(umap_embedding))[1]){
-    colnames(umap_embedding)<-paste0("UMAP_",1:ncol(umap_embedding))
-    xynames<-colnames(umap_embedding)
-  }else{
-    xynames<-colnames(umap_embedding)
-    colnames(umap_embedding)<-paste0("UMAP_",1:ncol(umap_embedding))
-  }
-  umap_embedding$label<-factor(label)
-
-  qual_col_pals <- brewer.pal.info[brewer.pal.info$category == 'qual',]
-  col_vector <- unlist(mapply(brewer.pal,
-    qual_col_pals$maxcolors,rownames(qual_col_pals)))
-  if(color.mode==1){
-    col_vector <- unique(col_vector)
-    col_vector[4]<-"#ffd000"
-  }else if (color.mode==2){
-    col_vector <- unique(col_vector)
-    col_vector <- col_vector[-4]
-  }
-  cpnum<-length(unique(label))%/%length(col_vector)+1
-  col_vector<-rep(col_vector,cpnum)
-  gg<-ggplot(umap_embedding)+
-    geom_point(aes(x = UMAP_1,
-      y = UMAP_2,
-      color = label),
-      size = pt.size)+
-    theme(legend.title = element_blank())+
-    theme(panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      panel.background = element_blank(),
-      axis.line = element_line(colour = "black"),
-      legend.key=element_blank())+
-    guides(color = guide_legend(override.aes =
-        list(size=3)))+
-    labs(x = xynames[1],y=xynames[2])
-  if(color.mode %in% c(1,2)){
-    gg<-gg+
-      scale_colour_manual(values =
-                            col_vector[c(1:length(unique(label)))])
-  }
-  if (!show.legend){
-    gg<-gg+theme(legend.position="none")
-  }
-
-  centers<-group_by(umap_embedding,label)
-  centers<-summarise(centers,x = median(x = UMAP_1),
-    y = median(x = UMAP_2),.groups = 'drop')
-  if(text){
-    gg <- gg +
-      geom_text_repel(data = centers,
-        mapping = aes(x = x, y = y,
-          label = label), size = 4,max.overlaps = 100)
-  }
-  gg
-}
-
-
-#' adaDimPlot2
-#'
-#' Adaptively Plot the UMAP Embedding
-#'
-#' @details Some details
-#' @param expr_matrix character
-#'
-#' @return nothing useful
-#'
-#' @importFrom RColorBrewer brewer.pal brewer.pal.info
-#' @importFrom dplyr group_by summarise
-#' @importFrom ggrepel geom_text_repel
-#' @importFrom stats median
-#' @import ggplot2
-#'
-#' @export
-#'
-#' @examples
-#' a<-1
-#'
-#'
-#'
-adaDimPlot2<-function(
-    umap_embedding,
-    label,
+    object,
+    group.by,
+    axis.name="SAVIS",
     pt.size=0,
     show.legend=TRUE,
-    scale_color=c("grey","blue")
+    seed.use = 42,
+    text = TRUE,
+    color.mode = 1,
+    scale_color=c("grey","blue"),
+    slot=NULL
 ){
-  set.seed(42)
-  shuffle_index<-sample(1:nrow(umap_embedding))
-  umap_embedding<-umap_embedding[shuffle_index,]
-  label<-label[shuffle_index]
-  umap_embedding<-data.frame(umap_embedding)
-  if(is.null(colnames(umap_embedding))[1]){
-    colnames(umap_embedding)<-paste0("UMAP_",1:ncol(umap_embedding))
-    xynames<-colnames(umap_embedding)
-  }else{
-    xynames<-colnames(umap_embedding)
-    colnames(umap_embedding)<-paste0("UMAP_",1:ncol(umap_embedding))
-  }
-  umap_embedding$label<-label
 
-  gg<-ggplot(umap_embedding)+
-    geom_point(aes(x = UMAP_1,
-                   y = UMAP_2,
-                   color = label),
-               size = pt.size)+
-    theme(legend.title = element_blank())+
-    theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.background = element_blank(),
-          axis.line = element_line(colour = "black"),
-          legend.key=element_blank())+
-    #scale_colour_gradientn(colors=rainbow(15)[c(12:1,14,15)])+
-    scale_colour_gradientn(colors=c(scale_color))+
-    labs(x = xynames[1],y=xynames[2])
-  if (!show.legend){
-    gg<-gg+theme(legend.position="none")
+  if(inherits(x = object, 'Seurat')){
+    if(is.null(slot)){
+      sv<-object@reductions$savis@cell.embeddings
+    }else if(slot == "tsMDS"){
+      sv<-object@reductions$savis@cell.embeddings.tsMDS.adjust
+    }else if(slot == "umap"){
+      sv<-object@reductions$savis@cell.embeddings.umap.adjust
+    }
+  }else{
+    sv<-as.matrix(object)
   }
-  gg
+  if(ncol(sv)>2){
+    sv<-sv[,1:2]
+  }
+  if (is.character(group.by[1]) | is.factor(group.by[1])){
+    return (DimPlot1(embedding=sv,
+                     group.by=group.by,
+                     axis.name=axis.name,
+                     pt.size=pt.size,
+                     show.legend=show.legend,
+                     seed.use = seed.use,
+                     text = text,
+                     color.mode = color.mode))
+  }else if (is.numeric(group.by[1])){
+    return (DimPlot2(embedding=sv,
+                     group.by=group.by,
+                     axis.name=axis.name,
+                     pt.size=pt.size,
+                     show.legend=show.legend,
+                     scale_color=scale_color))
+  }
+
 }
+
+
+
+
+
 
 
 #' SeuratLPCA
