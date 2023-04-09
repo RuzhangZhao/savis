@@ -7,9 +7,9 @@
 SubPCEmbedding(
   expr_matrix,
   cluster_label,
-  assay_for_var_features = "normalizedcount",
-  npcs = 20,
-  nfeatures = 2000,
+  npcs,
+  nfeatures,
+  hvg_method = NULL,
   return_hvg = FALSE,
   verbose = FALSE
 )

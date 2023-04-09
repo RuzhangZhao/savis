@@ -8,9 +8,9 @@ FormCombinedEmbedding(
   expr_matrix,
   expr_matrix_pca,
   cluster_label,
-  assay_for_var_features = "normalizedcount",
-  npcs = 20,
-  nfeatures = 2000,
+  npcs,
+  nfeatures,
+  hvg_method = NULL,
   center_method = "mean",
   scale_factor_separation = 3
 )

@@ -6,10 +6,9 @@
 \usage{
 savis(
   expr_matrix,
-  is_count_matrix = TRUE,
-  assay_for_var_features = "rawcount",
   npcs = 20,
   nfeatures = 2000,
+  hvg_method = NULL,
   distance_metric = "euclidean",
   cluster_method = "louvain",
   resolution = 0.1,
@@ -26,6 +25,7 @@ savis(
   shrink_distance = TRUE,
   density_adjust = TRUE,
   density_adjust_via_global_umap = FALSE,
+  adjust_scale_factor = 0.9,
   global_umap_embedding = NULL,
   check_differential = FALSE,
   verbose = TRUE,
@@ -39,10 +39,6 @@ savis(
 }
 \arguments{
 \item{expr_matrix}{The expression matrix: gene(feature) as row; cell(sample) as column.}
-
-\item{is_count_matrix}{Whether expr_matrix is count matrix or normalized version. If the expression matrix is count matrix, normalization will be performed. Default is TRUE.}
-
-\item{assay_for_var_features}{The assay we use to select highly variable genes. Select from c("rawcount","normalizedcount"). Default is "rawcount".}
 
 \item{npcs}{The number of principle components will be computed as the initialization input of nonlinear low dimensional embeddings. Default is 20.}
 
@@ -87,6 +83,10 @@ savis(
 \item{verbose_more}{The default is FALSE.}
 
 \item{seed.use}{The default is 42L}
+
+\item{is_count_matrix}{Whether expr_matrix is count matrix or normalized version. If the expression matrix is count matrix, normalization will be performed. Default is TRUE.}
+
+\item{assay_for_var_features}{The assay we use to select highly variable genes. Select from c("rawcount","normalizedcount"). Default is "rawcount".}
 }
 \value{
 nothing useful

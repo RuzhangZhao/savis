@@ -15,7 +15,7 @@ FormAdaptiveCombineList(
   npcs,
   nfeatures,
   process_min_size,
-  assay_for_var_features = "normalizedcount",
+  hvg_method = NULL,
   differentail_gene_cutoff = 20,
   do_cluster = TRUE,
   cluster_label = NULL,

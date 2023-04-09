@@ -6,7 +6,7 @@
 \usage{
 RunPreSAVIS(
   object,
-  assay_for_var_features = "rawcount",
+  hvg_method = NULL,
   distance_metric = "euclidean",
   cluster_method = "louvain",
   resolution = 0.5,
@@ -25,8 +25,6 @@ RunPreSAVIS(
 }
 \arguments{
 \item{object}{sdsd}
-
-\item{assay_for_var_features}{sds}
 
 \item{distance_metric}{The default is "euclidean".}
 
@@ -53,6 +51,8 @@ RunPreSAVIS(
 \item{return_cluster}{The default is FALSE.}
 
 \item{verbose_more}{The default is FALSE.}
+
+\item{assay_for_var_features}{sds}
 }
 \value{
 nothing useful

@@ -11,6 +11,7 @@ RunSAVIS(
   adjust_rotate = TRUE,
   shrink_distance = TRUE,
   density_adjust = TRUE,
+  adjust_scale_factor = 0.9,
   verbose = TRUE,
   seed.use = 42L
 )

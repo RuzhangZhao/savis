@@ -4,12 +4,7 @@
 \alias{SeuratLPCA}
 \title{SeuratLPCA}
 \usage{
-SeuratLPCA(
-  expr_matrix,
-  assay_for_var_features = "rawcount",
-  npcs = 20,
-  nfeatures = 2000
-)
+SeuratLPCA(expr_matrix, method.names = NULL, npcs = 20, nfeatures = 2000)
 }
 \arguments{
 \item{expr_matrix}{character}

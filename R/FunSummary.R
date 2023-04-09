@@ -9,10 +9,10 @@
 #' @param assay_for_var_features The assay we use to select highly variable genes. Select from c("rawcount","normalizedcount"). Default is "rawcount".
 #' @param npcs The number of principle components will be computed as the initialization input of nonlinear low dimensional embeddings. Default is 20.
 #' @param nfeatures The number of highly variable genes will be selected. Default is 2000.
-#' @param distance_metric The default is "euclidean". Recommend to use "euclidean" because we need to distinguish between global distance and local distance. 
+#' @param distance_metric The default is "euclidean". Recommend to use "euclidean" because we need to distinguish between global distance and local distance.
 #' @param cluster_method The default is "louvain". User can choose from c("louvain","spectral"). But "louvain" performs much better.
 #' @param resolution The resolution for the louvain clustering. The resolution ranges from 0 to 1. The lower resolution means conservative clustering(smaller number of clusters), while the higher resolution means aggressive clustering. The default is 0.5.
-#' @param resolution_sub The resolution for the louvain clustering within subclusters, which means after the first step clustering and separation, we perform further clustering. The default is 0 because we are mainly interested in one step separation. 
+#' @param resolution_sub The resolution for the louvain clustering within subclusters, which means after the first step clustering and separation, we perform further clustering. The default is 0 because we are mainly interested in one step separation.
 #' @param adaptive Whether we will run adaptive visualization. If adaptive is FALSE, we are just doing UMAP. The default is TRUE.
 #' @param max_stratification The maximum level of stratification for subclustering. Set the maximum level to restrict too detailed exploration. The default is 3.
 #' @param scale_factor_separation Scale factor used to distinguish global distance and local distance. The default is 3.
@@ -29,12 +29,12 @@
 #' @param return_cluster The default is FALSE.
 #' @param verbose_more The default is FALSE.
 #' @param seed.use The default is 42L
-#' 
-#' 
-#' 
-#' 
-#' 
-#' 
+#'
+#'
+#'
+#'
+#'
+#'
 #'
 #' @return nothing useful
 #'
@@ -43,10 +43,11 @@
 #' @importFrom uwot umap
 #' @importFrom MASS isoMDS
 #' @importFrom cluster pam
+#' @importFrom mixhvg FindVariableFeaturesMix
 #' @import ggplot2
 #' @import RColorBrewer
 #' @import dplyr
-#' 
+#'
 #' @export
 #'
 #' @examples
@@ -96,11 +97,11 @@ savis<-function(
     seed.use<-as.integer(seed.use)
   }
   if(max_stratification <= 1){
-    stop("Please directly use umap: savis 
-      supports adaptive visualization for 
+    stop("Please directly use umap: savis
+      supports adaptive visualization for
       max_stratification larger than 1.")
   }
-  
+
   if (nrow(expr_matrix) < nfeatures){
     stop("nfeatures should be smaller than
       the number of features in expression
@@ -140,23 +141,23 @@ savis<-function(
   }
   if(is.null(hvg_method)){
     hvg<-FindVariableFeaturesMix(expr_matrix,
-                                 nfeatures = nfeatures) 
+                                 nfeatures = nfeatures)
   }else{
     hvg<-FindVariableFeaturesMix(expr_matrix,method.names = hvg_method,
                                  nfeatures = nfeatures)
   }
   expr_matrix_process<-expr_matrix_process[hvg,]
- 
+
   if(verbose){
     cat('\n')
     print("Scaling Expression Matrix...")
     setTxtProgressBar(pb = pb, value = 2)
   }
-  
+
   expr_matrix_process <- ScaleData(
     expr_matrix_process,
     verbose = verbose_more)
-  
+
   if(verbose){
     cat('\n')
     print("Calculating Global PCA...")
@@ -185,7 +186,7 @@ savis<-function(
     unique(as.character(cluster_label))))
   # number of cluster label
   N_label<-length(label_index)
-  
+
   size_cluster<-c()
   for ( i in 1:N_label){
     size_cluster<-c(size_cluster,
@@ -204,7 +205,7 @@ savis<-function(
       print(paste0("Size of Cluster: ",size_cluster))
     }
   }
-  
+
   if(verbose){
     cat('\n')
     print("Calculating Local PCA...")
@@ -212,7 +213,7 @@ savis<-function(
   }
 
   if(max_stratification == 2 | adaptive == FALSE){
-    
+
     combined_embedding<-FormCombinedEmbedding(
       expr_matrix=expr_matrix,
       expr_matrix_pca=expr_matrix_pca,
@@ -237,14 +238,14 @@ savis<-function(
       print(paste0("Process_min_size: ",process_min_size))
       setTxtProgressBar(pb = pb, value = 9.5)
     }
-    
-    
+
+
     if(verbose){
       cat('\n')
       print("Exploring if clusters can be separated further...")
       setTxtProgressBar(pb = pb, value = 10)
     }
-    
+
     umap_res<-FormAdaptiveCombineList(
       expr_matrix=expr_matrix,
       expr_matrix_pca=expr_matrix_pca,
@@ -306,8 +307,8 @@ savis<-function(
       combined_embedding)
     metric_count <- 1
   }
-  
-  
+
+
   combined_embedding_list<-list()
   if(compressed_storage){
     if(metric_count > 1){
@@ -325,16 +326,16 @@ savis<-function(
         for ( i in start_col:ncol_cluster){
           index_i<-which(cluster_label[,i]!= -1)
           combined_embedding_list[[i]]<-combined_embedding[index_i,(ncol_cluster+i*npcs+1):(ncol_cluster+(i+1)*npcs)]
-        } 
+        }
       }
     }
   }
-  
+
   if(!run_adaUMAP){
     if(return_cluster){
       if(length(combined_embedding_list)>0){
         newList<-list("combined_embedding"=combined_embedding_list,
-          "cluster_label"=cluster_label) 
+          "cluster_label"=cluster_label)
       }else{
         newList<-list("combined_embedding"=combined_embedding,
           "cluster_label"=cluster_label)
@@ -369,8 +370,8 @@ savis<-function(
         if(is.null(global_umap_embedding)){
           expr_matrix_umap<-umap(
             X = expr_matrix_pca,
-            a = 1.8956, 
-            b = 0.8006, 
+            a = 1.8956,
+            b = 0.8006,
             metric = distance_metric
           )
         }else{
@@ -381,7 +382,7 @@ savis<-function(
       #umap_embedding<<-umap_embedding
       #expr_matrix_pca<<-expr_matrix_pca
       #global_cluster_label<<-global_cluster_label
-      
+
       umap_embedding<-adjustUMAP(
         pca_embedding = expr_matrix_pca,
         umap_embedding = umap_embedding,
@@ -398,7 +399,7 @@ savis<-function(
       if(length(combined_embedding_list)>0){
         newList<-list("combined_embedding"=combined_embedding_list,
           "savis_embedding"=umap_embedding,
-          "cluster_label"=cluster_label) 
+          "cluster_label"=cluster_label)
       }else{
         newList<-list("combined_embedding"=combined_embedding,
           "savis_embedding"=umap_embedding,
@@ -410,9 +411,9 @@ savis<-function(
       newList<-umap_embedding
     }
   }
-  
-  
-  
+
+
+
   if(verbose){
     cat('\n')
     print("Finished...")
@@ -430,7 +431,7 @@ savis<-function(
 #'
 #' @param object sdsd
 #' @param assay_for_var_features sds
-#' @param distance_metric The default is "euclidean". 
+#' @param distance_metric The default is "euclidean".
 #' @param cluster_method The default is "louvain". User can choose from c("louvain","spectral"). But "louvain" performs much better.
 #' @param resolution The resolution for The default is 0.5.
 #' @param resolution_sub The default is 0.
@@ -443,12 +444,12 @@ savis<-function(
 #' @param show_cluster The default is FALSE.
 #' @param return_cluster The default is FALSE.
 #' @param verbose_more The default is FALSE.
-#' 
-#' 
-#' 
-#' 
-#' 
-#' 
+#'
+#'
+#'
+#'
+#'
+#'
 #'
 #' @return nothing useful
 #'
@@ -485,13 +486,13 @@ RunPreSAVIS<-function(
   }
   nfeatures<-length(VariableFeatures(object))
   npcs<-ncol(object@reductions$pca@cell.embeddings)
-  
+
   if(max_stratification == 1){
-    stop("Please directly use umap: savis 
-      supports adaptive visualization for 
+    stop("Please directly use umap: savis
+      supports adaptive visualization for
       max_stratification larger than 1.")
   }
-  
+
   if(verbose){
     cat('\n')
     print("Global PCs are captured from SeuratObject...")
@@ -514,7 +515,7 @@ RunPreSAVIS<-function(
     unique(as.character(cluster_label))))
   # number of cluster label
   N_label<-length(label_index)
-  
+
   size_cluster<-c()
   for ( i in 1:N_label){
     size_cluster<-c(size_cluster,
@@ -533,14 +534,14 @@ RunPreSAVIS<-function(
       print(paste0("Size of Cluster: ",size_cluster))
     }
   }
-  
+
   if(verbose){
     cat('\n')
     print("Calculating Local PCA...")
     setTxtProgressBar(pb = pb, value = 4)
   }
   if(max_stratification == 2 | adaptive == FALSE){
-    
+
     combined_embedding<-FormCombinedEmbedding(
       expr_matrix=object@assays[[default_assay]]@counts,
       expr_matrix_pca=expr_matrix_pca,
@@ -565,15 +566,15 @@ RunPreSAVIS<-function(
       print(paste0("Process_min_size: ",process_min_size))
       setTxtProgressBar(pb = pb, value = 5)
     }
-    
-    
+
+
     if(verbose){
       cat('\n')
       print("Exploring if clusters can be separated further...")
       setTxtProgressBar(pb = pb, value = 7)
     }
-    
-    
+
+
     umap_res<-FormAdaptiveCombineList(
       expr_matrix=object@assays[[default_assay]]@counts,
       expr_matrix_pca=expr_matrix_pca,
@@ -590,7 +591,7 @@ RunPreSAVIS<-function(
       cluster_label = cluster_label,
       check_differential = check_differential,
       verbose = verbose_more)
-    
+
     cluster_label<-umap_res$cluster_label
     if(is.null(dim(cluster_label)[1])){
       combined_embedding<-data.frame(
@@ -635,23 +636,23 @@ RunPreSAVIS<-function(
       combined_embedding)
     metric_count <- 1
   }
-  
+
   setClass("savis_class", representation(
-    combined_embedding = "matrix", 
+    combined_embedding = "matrix",
     cluster_label = "numeric",
     global_cluster_label = "numeric",
     savis_embedding = "matrix",
     distance_metric = "character",
     metric_count = "numeric"))
-  savis_pre <- new("savis_class", 
-    combined_embedding = as.matrix(combined_embedding), 
+  savis_pre <- new("savis_class",
+    combined_embedding = as.matrix(combined_embedding),
     cluster_label = cluster_label,
     global_cluster_label = global_cluster_label,
     distance_metric = distance_metric,
     metric_count = metric_count)
-  
+
   object@reductions$savis<-savis_pre
-  
+
   if(verbose){
     cat('\n')
     print("Finished...")
@@ -679,21 +680,21 @@ RunPreSAVIS<-function(
 #' @param density_adjust = TRUE,
 #' @param verbose = TRUE,
 #' @param seed.use = 42L
-#' 
-#' 
-#' 
-#' 
-#' 
+#'
+#'
+#'
+#'
+#'
 #'
 #' @return nothing useful
 #'
 #' @importFrom Seurat NormalizeData FindVariableFeatures ScaleData RunPCA DefaultAssay
 #' @importFrom utils setTxtProgressBar txtProgressBar
 #' @export
-#' 
+#'
 #' @examples
 #' a<-1
-#' 
+#'
 RunSAVIS<-function(
   object,
   adjust_UMAP = TRUE,
@@ -772,7 +773,7 @@ savis_nth<- function(x, k) {
   ## might have problem when k is too large for nan case
   p <- length(x) - k
   if(p < 0){
-    stop("savis_nth: input k too larger") 
+    stop("savis_nth: input k too larger")
   }else if(p == 0){
     res<-1:length(x)
   }else{
@@ -805,7 +806,7 @@ print.boxx<-function(){}
 #' @param local.connectivity = 1L,
 #' @param repulsion.strength = 1,
 #' @param negative.sample.rate = 5,
-#' @param a = 1.8956, 
+#' @param a = 1.8956,
 #' @param b = 0.8006,
 #' @param uwot.sgd = FALSE,
 #' @param seed.use = 42L,
@@ -836,7 +837,7 @@ RunAdaUMAP<-function(
   local.connectivity = 1L,
   repulsion.strength = 1,
   negative.sample.rate = 5,
-  a = 1.8956, 
+  a = 1.8956,
   b = 0.8006,
   uwot.sgd = FALSE,
   seed.use = 42L,
@@ -853,15 +854,15 @@ RunAdaUMAP<-function(
     "adaptive_dist2_grad",
     "adaptive_dist3_grad",
     "adaptive_dist_general_grad")
-  
+
   # source the python script into the main python module
   py_run_string(glue(
     "
-import numba 
+import numba
 import numpy as np
 import warnings
 from umap import distances as dist
-py_metric='{metric}' 
+py_metric='{metric}'
 py_dist = dist.named_distances_with_gradients[py_metric]
 warnings.filterwarnings('ignore')
 @numba.njit(fastmath=True)
@@ -885,11 +886,11 @@ def adaptive_dist2_grad(x, y):
             d,grad = py_dist(x[(npcs+2):(2*npcs+2)],y[(npcs+2):(2*npcs+2)])
         else:
             d,grad = py_dist(x[(2*npcs+2):(3*npcs+2)],y[(2*npcs+2):(3*npcs+2)])
-    return d, grad 
+    return d, grad
 
 @numba.njit(fastmath=True)
 def adaptive_dist3_grad(x, y):
-    
+
     result = 0.0
     npcs = int((len(x)-3)/4)
     if x[0] != y[0]:
@@ -918,31 +919,31 @@ def adaptive_dist_general_grad(x, y):
             break
     if not processed:
         d,grad=py_dist(x[((num_layer-1)*npcs+num_layer):(num_layer*npcs+num_layer)],y[((num_layer-1)*npcs+num_layer):(num_layer*npcs+num_layer)])
-         
+
     return d, grad
-")  
+")
     ,local = FALSE, convert = TRUE)
-  
-  
+
+
   # copy objects from the main python module into the specified R environment
   py_main <- import_main(convert = TRUE)
   py_main_dict <- py_get_attr(py_main, "__dict__")
-  
+
   Encoding(py_func_names) <- "UTF-8"
   #for (py_name in py_func_names){
   #  py_value <- py_main_dict[[py_name]]
-  #  assign(py_name, py_value, envir = py_envir) 
+  #  assign(py_name, py_value, envir = py_envir)
   #}
   py_name<- py_func_names[metric_count]
   py_value <- py_main_dict[[py_name]]
-  assign(py_name, py_value, envir = py_envir) 
+  assign(py_name, py_value, envir = py_envir)
   if (!is.null(x = seed.use)) {
     py_set_seed(seed = seed.use)
   }
   if (typeof(x = n.epochs) == "double") {
     n.epochs <- as.integer(x = n.epochs)
   }
-  
+
   if (metric_count == 1){
     adaptive_metric<-adaptive_dist_grad
   }
@@ -981,8 +982,8 @@ def adaptive_dist_general_grad(x, y):
   umap_embedding
 }
 
-### If the storage is compressed, it should be recovered 
-## to be a matrix 
+### If the storage is compressed, it should be recovered
+## to be a matrix
 get_matrix_from_list<-function(
   combined_embedding_list){
   list_len<-length(combined_embedding_list)
@@ -1014,7 +1015,7 @@ get_matrix_from_list<-function(
 #' tsMDS
 #'
 #' two step MDS
-#' 
+#'
 #' @importFrom stats cmdscale dist
 #' @importFrom Rfast Dist
 #' @importFrom mize mize
@@ -1030,28 +1031,28 @@ tsMDS<-function(
   dist_main=NULL){
   N<-nrow(dist_full)
   if(is.null(dist_main)){
-    dist_main<-dist_full[main_index,main_index] 
+    dist_main<-dist_full[main_index,main_index]
   }
   main_initial<-cmdscale(dist(dist_main),k=2)
-  ### First Step of two-step MDS  
+  ### First Step of two-step MDS
   cost_fun <- function(R, D) {
     diff2 <- (R - D) ^ 2
     sum(diff2) * 0.5
   }
-  
+
   cost_grad <- function(R, D, y) {
     K <- (R - D) / (D + 1.e-10)
-    
+
     G <- matrix(nrow = nrow(y), ncol = ncol(y))
-    
+
     for (i in 1:nrow(y)) {
       dyij <- sweep(-y, 2, -y[i, ])
       G[i, ] <- apply(dyij * K[, i], 2, sum)
     }
-    
+
     as.vector(t(G)) * -2
   }
-  
+
   mmds_fn <- function(par) {
     R <- dist_main
     y <- matrix(par, ncol = 2, byrow = TRUE)
@@ -1059,23 +1060,23 @@ tsMDS<-function(
     #D <- as.matrix(parDist(y))
     cost_fun(R, D)
   }
-  
+
   mmds_gr <- function(par) {
     R <- dist_main
     y <- matrix(par, ncol = 2, byrow = TRUE)
     D <- Dist(y)
     #D <- as.matrix(parDist(y))
-    
+
     cost_grad(R, D, y)
   }
-  
+
   initial_val_main<-c(t(main_initial))
-  res_main <- mize(initial_val_main, list(fn = mmds_fn, gr = mmds_gr), 
-    method = "L-BFGS", verbose = FALSE, 
+  res_main <- mize(initial_val_main, list(fn = mmds_fn, gr = mmds_gr),
+    method = "L-BFGS", verbose = FALSE,
     grad_tol = 1e-5, check_conv_every = 10)
-  
+
   main_mds<-matrix(res_main$par, ncol = 2, byrow = TRUE)
-  
+
   ### Second Step of two-step MDS
   remain_index<-c(1:N)[which(!c(1:N)%in%main_index)]
   if(length(remain_index) == 0){
@@ -1085,7 +1086,7 @@ tsMDS<-function(
     remain_initial<-c(0,0)
   }else{
     dist_remain<-dist_full[remain_index,remain_index]
-    remain_initial<-cmdscale(dist(dist_remain),k=2) 
+    remain_initial<-cmdscale(dist(dist_remain),k=2)
   }
     cost_fun <- function(R, D) {
       diff2 <- (R - D) ^ 2
@@ -1095,16 +1096,16 @@ tsMDS<-function(
       K <- (R - D) / (D + 1.e-10)
       y<-rbind(y1,y2)
       G <- matrix(nrow = nrow(y)-nrow(y1), ncol = ncol(y))
-      
+
       for (i in 1:(nrow(y)-nrow(y1))) {
         i1<-nrow(y1)+i
         dyij <- sweep(-y, 2, -y[i1, ])
         G[i, ] <- apply(dyij * K[, i1], 2, sum)
       }
-      
+
       as.vector(t(G)) * -2
     }
-    
+
     mmds_fn <- function(par) {
       R <- dist_full
       y1<- main_mds
@@ -1114,7 +1115,7 @@ tsMDS<-function(
       #D <- as.matrix(parDist(y))
       cost_fun(R, D)
     }
-    
+
     mmds_gr <- function(par) {
       R <- dist_full
       y1<- main_mds
@@ -1125,14 +1126,14 @@ tsMDS<-function(
       cost_grad1(R, D, y1, y2)
     }
     initial_val_remain<-c(t(remain_initial))
-    
-    res_remain <- mize(initial_val_remain, list(fn = mmds_fn, gr = mmds_gr), 
-      method = "L-BFGS", verbose = FALSE, 
+
+    res_remain <- mize(initial_val_remain, list(fn = mmds_fn, gr = mmds_gr),
+      method = "L-BFGS", verbose = FALSE,
       grad_tol = 1e-5, check_conv_every = 10)
     remain_mds<-matrix(res_remain$par, ncol = 2, byrow = TRUE)
-    
+
     tsMDS_res<-rbind(main_mds,remain_mds)
-  
+
 
   tsMDS_res
 }
@@ -1142,15 +1143,15 @@ tsMDS<-function(
 
 rotation = function(x,y){
   u=x/sqrt(sum(x^2))
-  
+
   v=y-sum(u*y)*u
   v=v/sqrt(sum(v^2))
-  
+
   cost=sum(x*y)/sqrt(sum(x^2))/sqrt(sum(y^2))
-  
+
   sint=sqrt(1-cost^2);
-  
-  diag(length(x)) - u %*% t(u) - v %*% t(v) + 
+
+  diag(length(x)) - u %*% t(u) - v %*% t(v) +
     cbind(u,v) %*% matrix(c(cost,-sint,sint,cost), 2) %*% t(cbind(u,v))
 }
 
@@ -1161,18 +1162,18 @@ Detect_edge<-function(
   edge){
   rotation = function(x,y){
     u=x/sqrt(sum(x^2))
-    
+
     v=y-sum(u*y)*u
     v=v/sqrt(sum(v^2))
-    
+
     cost=sum(x*y)/sqrt(sum(x^2))/sqrt(sum(y^2))
-    
+
     sint=sqrt(1-cost^2);
-    
-    diag(length(x)) - u %*% t(u) - v %*% t(v) + 
+
+    diag(length(x)) - u %*% t(u) - v %*% t(v) +
       cbind(u,v) %*% matrix(c(cost,-sint,sint,cost), 2) %*% t(cbind(u,v))
   }
-  
+
   vec<-edge-whole_mean
   Rvec2xaxis<-rotation(as.numeric(vec),c(1,0))
   whole_rotated<-t(t(whole)-as.numeric(whole_mean))%*%Rvec2xaxis
@@ -1187,7 +1188,7 @@ Detect_edge<-function(
 #' tsMDS
 #'
 #' two step MDS
-#' 
+#'
 #' @importFrom pdist pdist
 #'
 #' @examples
@@ -1239,17 +1240,17 @@ get_umap_embedding_adjust_umap<-function(
     #weight_2<-1/pdist(umap_center2_tmp,c(0,0))@dist
     #weight_2<-weight_2/sum(weight_2)
     angles<-sapply(1:(N_label_-1), function(i){
-      
+
       umap1<-umap_center1_tmp[i,]
       umap2<-umap_center2_tmp[i,]
       umap1<-umap1/sqrt(sum(umap1^2))
       umap2<-umap2/sqrt(sum(umap2^2))
-      
+
       Rumap2toumap1<-rotation(umap2,umap1)
       Rumap2toumap1 <- pmax(Rumap2toumap1,-1)
       Rumap2toumap1 <- pmin(Rumap2toumap1,1)
       angle<-acos(Rumap2toumap1[1,1])
-      
+
       if(Rumap2toumap1[2,1]>=0){
         angle<-acos(Rumap2toumap1[1,1])
       }else{
@@ -1265,7 +1266,7 @@ get_umap_embedding_adjust_umap<-function(
     R2to1[1,2]<- -R2to1[2,1]
     R2to1
   }
-  
+
   if(is.null(pca_dist_main)){
     pca_dist_main<-pca_dist[main_index,main_index]
   }
@@ -1286,7 +1287,7 @@ get_umap_embedding_adjust_umap<-function(
       fast_sgd = FALSE
     )
   colnames(main_umap_center)<-c("UMAP_1","UMAP_2")
-  
+
   main_umap_center<-data.frame(main_umap_center)
   sf1<-(max(umap_embedding[,1])-min(umap_embedding[,1]))/(max(main_umap_center[,1]) -min(main_umap_center[,1]))
   sf2<-(max(umap_embedding[,2])-min(umap_embedding[,2]))/(max(main_umap_center[,2]) -min(main_umap_center[,2]))
@@ -1297,9 +1298,9 @@ get_umap_embedding_adjust_umap<-function(
     colMeans(as.matrix(umap_embedding[index_i,]))
   }))
   umap_embedding_adjust<-umap_embedding
-  
+
   if (rotate){
-    
+
     main_umap_center_flip<-main_umap_center
     main_umap_center_flip[,1]<-main_umap_center_flip[,1]*(-1)
     angle_var<-c()
@@ -1307,20 +1308,20 @@ get_umap_embedding_adjust_umap<-function(
     angle_no_flip<-list()
     angle_flip<-list()
     for (i in 1:length(main_index)){
-      
+
       weight_sample<-c(weight_sample,sum(cluster_ == label_index_[main_index[i]]))
       R2to1<-Rotation2to1(
         umap_center1 = main_umap_center,
         umap_center2 = pca_center[,c(1,2)],
         pos1 = i,
-        pos2 = main_index[i])  
-      
+        pos2 = main_index[i])
+
       R2to1_flip<-Rotation2to1(
         umap_center1 = main_umap_center_flip,
         umap_center2 = pca_center[,c(1,2)],
         pos1 = i,
-        pos2 = main_index[i])  
-      
+        pos2 = main_index[i])
+
       angle_vec<-sapply(1:length(pca_anchor_index[[i]]), function(j){
         y<-as.numeric(pca_embedding[pca_anchor_index[[i]][j],c(1,2)]-pca_center[main_index[i],c(1,2)])%*%R2to1
         y<-as.numeric(y)
@@ -1329,11 +1330,11 @@ get_umap_embedding_adjust_umap<-function(
         x<-as.numeric(x)
         y<-y/sqrt(sum(y^2))
         x<-x/sqrt(sum(x^2))
-        
+
         Rx2y <- rotation(x,y)
         Rx2y <- pmax(Rx2y,-1)
         Rx2y <- pmin(Rx2y,1)
-        
+
         if(Rx2y[2,1]>=0){
           angle<-acos(Rx2y[1,1])
         }else{
@@ -1349,10 +1350,10 @@ get_umap_embedding_adjust_umap<-function(
         x<-as.numeric(x)
         y<-y/sqrt(sum(y^2))
         x<-x/sqrt(sum(x^2))
-        
+
         Rx2y <- rotation(x,y)
-        
-        
+
+
         if(Rx2y[2,1]>=0){
           angle<- acos(Rx2y[1,1])
         }else{
@@ -1360,7 +1361,7 @@ get_umap_embedding_adjust_umap<-function(
         }
         angle
       })
-      
+
       angle_vec<-angle_vec[angle_vec>min(angle_vec)]
       angle_vec<-angle_vec[angle_vec<max(angle_vec)]
       angle_vec_flip<-angle_vec_flip[angle_vec_flip>min(angle_vec_flip)]
@@ -1377,7 +1378,7 @@ get_umap_embedding_adjust_umap<-function(
       # use no flip
       angle_vec<-angle_no_flip
     }
-    
+
     for ( i in 1:length(main_index)){
       anglex2y<-mean(angle_vec[[i]])
       #print(anglex2y)
@@ -1387,9 +1388,9 @@ get_umap_embedding_adjust_umap<-function(
       index_i<-which(cluster_ == label_index_[main_index[i]])
       umap_embedding_adjust[index_i,]<-t(t(t(t(umap_embedding[index_i,])-as.numeric(umap_embedding_mean[main_index[i],]))%*%Rx2y)+as.numeric(main_umap_center[i,]))
     }
-    
+
   }else{
-    
+
     for(i in 1:length(main_index)){
       index_i<-which(cluster_ == label_index_[main_index[i]])
       umap_embedding_adjust[index_i,]<-t(t(umap_embedding[index_i,])-as.numeric(umap_embedding_mean[main_index[i],]-main_umap_center[i,]))
@@ -1443,7 +1444,7 @@ adjustUMAP_via_umap<-function(
     unique(as.character(cluster_label))))
   # number of cluster label
   N_label<-length(label_index)
-  
+
   size_cluster<-c()
   for ( i in 1:N_label){
     size_cluster<-c(size_cluster,
@@ -1456,7 +1457,7 @@ adjustUMAP_via_umap<-function(
     resolution = 0,
     verbose = F)[[1]]
   cluster_ <- as.numeric(as.character(cluster_))
-  
+
   N_label_<-length(unique(cluster_))
   label_index_<-sort(unique(cluster_))
   if(N_label_ <= 2){
@@ -1466,41 +1467,41 @@ adjustUMAP_via_umap<-function(
     sum(cluster_==label_index_[i])
   })
   N_sample<-nrow(pca_embedding)
-  cutoff_main_remain<-0.01*N_sample 
+  cutoff_main_remain<-0.01*N_sample
   main_index<-c(1:N_label_)[which(cluster_size_ > cutoff_main_remain)]
-  remain_index<-c(1:N_label_)[which(!c(1:N_label_)%in%main_index)]  
+  remain_index<-c(1:N_label_)[which(!c(1:N_label_)%in%main_index)]
   length_large_main_index<-length(main_index)
   cutoff_small_size_cluster<-mean(size_cluster)
   small_size_cluster_index<-which(size_cluster < cutoff_small_size_cluster)
   large_size_cluster_index<-which(size_cluster >= cutoff_small_size_cluster)
-  
+
   cluster_remain_index_collection<-list()
-  
+
   for(i in large_size_cluster_index){
     index_i<-which(cluster_label == label_index[i])
     cluster_i_collect<-which(label_index_%in%unique(cluster_[index_i]))
     cluster_i_collect<-intersect(cluster_i_collect,remain_index)
     cluster_remain_index_collection[[i]]<-cluster_i_collect
   }
-  
+
   for(i in small_size_cluster_index){
     index_i<-which(cluster_label == label_index[i])
     cluster_i_collect<-which(label_index_%in%unique(cluster_[index_i]))
     cluster_i_sizes<-sapply(cluster_i_collect, function(j){
       sum(cluster_[index_i] == label_index_[j])
-    }) 
+    })
     if(max(cluster_i_sizes)>cutoff_main_remain){
       cluster_i_collect<-intersect(cluster_i_collect,remain_index)
     }else{
       tmp<- cluster_i_collect[which.max(cluster_i_sizes)]
       main_index<-c(main_index,tmp)
       remain_index<-remain_index[remain_index!=tmp]
-      cluster_i_collect<-intersect(cluster_i_collect,remain_index) 
+      cluster_i_collect<-intersect(cluster_i_collect,remain_index)
     }
     cluster_remain_index_collection[[i]]<-cluster_i_collect
   }
   main_index<-main_index[order(main_index)]
-  
+
   if (density_adjust & !is.null(global_umap_embedding)){
     prop_density<-sapply(1:length(main_index), function(j){
       i<-main_index[j]
@@ -1535,7 +1536,7 @@ adjustUMAP_via_umap<-function(
       }else{
         cur_sf_here<-3
       }
-      
+
       umap_embedding[index_i,]<-t((t(cur_umap)-
           as.numeric(colMeans(cur_umap)))*cur_sf_here+
           as.numeric(colMeans(cur_umap)))
@@ -1547,12 +1548,12 @@ adjustUMAP_via_umap<-function(
       umap_embedding[index_i,]<-t((t(cur_umap)-as.numeric(colMeans(cur_umap)))*0.5+as.numeric(colMeans(cur_umap)))
     }
   }
-  
+
   pca_center<-t(sapply(1:N_label_, function(i){
     index_i<-which(cluster_ == label_index_[i])
     colMeans(pca_embedding[index_i,])
   }))
-  
+
   pca_anchor_index<-lapply(main_index, function(i){
     index_i<-which(cluster_ == label_index_[i])
     set.seed(seed.use)
@@ -1561,10 +1562,10 @@ adjustUMAP_via_umap<-function(
     savis_nth(x=sample_index_dist,
       k = max(1,min(ceiling(min_size/5),length(index_i))))
   })
-  
+
   pca_dist1<-Dist(pca_center)
   #pca_dist1<-as.matrix(parDist(pca_center))
-  
+
   step1_res<-get_umap_embedding_adjust_umap(
     pca_embedding=pca_embedding,
     pca_center=pca_center,
@@ -1595,12 +1596,12 @@ adjustUMAP_via_umap<-function(
     resolution = 0,
     verbose = F)[[1]]
   cluster_1 <- as.numeric(as.character(cluster_1))
-  
+
   N_label_1<-length(unique(cluster_1))
   if (N_label_1 < length(main_index)){
     ## First Adjustment
     label_index_1<-sort(unique(cluster_1))
-    
+
     bad_index<-list()
     list_index<-0
     for ( i in 1:N_label_1){
@@ -1611,7 +1612,7 @@ adjustUMAP_via_umap<-function(
         bad_index[[list_index]]<-c(unique(cluster_main[index_i1]))
       }
     }
-    
+
     cur_iter<-0
     if(is.null(maxit_push)){
       maxit_push<-min(N_label_/3,10)
@@ -1636,7 +1637,7 @@ adjustUMAP_via_umap<-function(
           umap_embedding_adjust_main[index_i,]<-t(t(umap_embedding_adjust_main[index_i,])-as.numeric(main_umap_center[cur_pos,])+as.numeric(cur_arrow))
         }
       }
-      
+
       snn_1<- FindNeighbors(object = umap_embedding_adjust_main,
         nn.method = "rann",
         verbose = F)$snn
@@ -1646,7 +1647,7 @@ adjustUMAP_via_umap<-function(
       cluster_1 <- as.numeric(as.character(cluster_1))
       N_label_1<-length(unique(cluster_1))
       label_index_1<-sort(unique(cluster_1))
-      
+
       bad_index<-list()
       list_index<-0
       for ( i in 1:N_label_1){
@@ -1657,9 +1658,9 @@ adjustUMAP_via_umap<-function(
           bad_index[[list_index]]<-c(unique(cluster_main[index_i1]))
         }
       }
-      
+
     }
-    
+
     if(N_label_1 < length(main_index)){
       #if(verbose){
       #  cat('\n')
@@ -1675,26 +1676,26 @@ adjustUMAP_via_umap<-function(
         dist_mat<-pdist(main_umap_center[pos,],main_umap_center)@dist
         target_distance<-min(dist_mat[dist_mat>=max(dist_mat[other_pos])])
         re_sf<-target_distance/max(dist_mat[other_pos])
-        
+
         umap_embedding_adjust<-umap_embedding_adjust*re_sf
         umap_embedding_adjust_main<-umap_embedding_adjust_main*re_sf
       }
     }
   }
-  
-  
+
+
   # Return to the whole umap_embedding,
   umap_embedding_adjust[which(cluster_%in%label_index_[main_index]),]<-umap_embedding_adjust_main
-  
+
   ###############---Begin to deal with small clusters---#########
-  
+
   unique_cluster_remain_index<-sort(unique(unlist(cluster_remain_index_collection)))
   unlist_cluster_remain_index<-unlist(cluster_remain_index_collection)
   unique_cluster_remain_index_count<-sapply(unique_cluster_remain_index, function(i){
     sum(unlist_cluster_remain_index == i)
   })
   duplicated_remain_index<-unique_cluster_remain_index[which(unique_cluster_remain_index_count > 1)]
-  
+
   for( dup_index in duplicated_remain_index){
     index_dup<-which(cluster_ == label_index_[dup_index])
     location_of_cluster<-unique(cluster_label[index_dup])
@@ -1709,7 +1710,7 @@ adjustUMAP_via_umap<-function(
       cluster_remain_index_collection[[i]]<-tmp
     }
   }
-  
+
   for(i in c(large_size_cluster_index,small_size_cluster_index)){
     cluster_i_collect<-cluster_remain_index_collection[[i]]
     if(length(cluster_i_collect)>0){
@@ -1717,26 +1718,26 @@ adjustUMAP_via_umap<-function(
       index_i<-which(cluster_label == label_index[i])
       index_remain<-which(cluster_ %in% label_index_[cluster_i_collect])
       index_i_noremain<-setdiff(index_i,index_remain)
-      
+
       cur_remain_pc_mean<-t(sapply(cluster_i_collect, function(cur_remain_index){
         index_cur_remain<-which(cluster_ == label_index_[cur_remain_index])
         colMeans(pca_embedding[index_cur_remain,])
       }))
-      
+
       res_knn<-FNN::knn(train = pca_embedding[index_i_noremain,],
         test = cur_remain_pc_mean,cl = cluster_[index_i_noremain],k = 1)
       close_cluster_label_<-res_knn[1:length(cluster_i_collect)]
       close_index<-index_i_noremain[attr(res_knn,"nn.index")[,1]]
-      
+
       #unique_close_cluster_label_<-unique(close_cluster_label_)
       #close_umap_mean<-t(sapply(unique_close_cluster_label_, function(unique_i){
       #  index_unique_close_cluster_label_<-which(cluster_==unique_i)
       #  colMeans(umap_embedding_adjust[index_unique_close_cluster_label_,])
       #}))
-      
+
       # go back to umap, check if these selected points are at edge
       for(cur_ in 1:length(close_cluster_label_)){
-        
+
         index_cur<-which(cluster_==close_cluster_label_[cur_])
         index_cur_remain<-which(cluster_==label_index_[cluster_i_collect[cur_]])
         whole_remain<-umap_embedding_adjust[index_cur_remain,]
@@ -1744,7 +1745,7 @@ adjustUMAP_via_umap<-function(
         farthest_remain_index<-Detect_farthest(whole_remain,whole_remain_mean)
         remain_vec1<-whole_remain[farthest_remain_index,]
         #cur_close_umap_mean<-close_umap_mean[
-        #  which(unique_close_cluster_label_ 
+        #  which(unique_close_cluster_label_
         #    == close_cluster_label_[cur_close_index]),]
         cur_edge_umap<-umap_embedding_adjust[close_index[cur_],]
         whole<-umap_embedding_adjust[index_cur,]
@@ -1761,8 +1762,8 @@ adjustUMAP_via_umap<-function(
       }
     }
   }
-  
-  
+
+
   return(umap_embedding_adjust)
 }
 
@@ -1793,17 +1794,17 @@ get_umap_embedding_adjust_tsMDS<-function(
     #weight_2<-1/pdist(umap_center2_tmp,c(0,0))@dist
     #weight_2<-weight_2/sum(weight_2)
     angles<-sapply(1:(N_label-1), function(i){
-      
+
       umap1<-umap_center1_tmp[i,]
       umap2<-umap_center2_tmp[i,]
       umap1<-umap1/sqrt(sum(umap1^2))
       umap2<-umap2/sqrt(sum(umap2^2))
-      
+
       Rumap2toumap1<-rotation(umap2,umap1)
       Rumap2toumap1 <- pmax(Rumap2toumap1,-1)
       Rumap2toumap1 <- pmin(Rumap2toumap1,1)
       angle<-acos(Rumap2toumap1[1,1])
-      
+
       if(Rumap2toumap1[2,1]>=0){
         angle<-acos(Rumap2toumap1[1,1])
       }else{
@@ -1819,7 +1820,7 @@ get_umap_embedding_adjust_tsMDS<-function(
     R2to1[1,2]<- -R2to1[2,1]
     R2to1
   }
-  
+
   if (adjust_method == "tsMDS"){
     set.seed(seed.use)
     umap_center<-tsMDS(dist_full = pca_dist,
@@ -1827,12 +1828,12 @@ get_umap_embedding_adjust_tsMDS<-function(
       dist_main = pca_dist_main)
     colnames(umap_center)<-c("tsMDS_1","tsMDS_2")
   }else if (adjust_method == "isoMDS"){
-    umap_center<-isoMDS(dist(pca_dist))$points 
+    umap_center<-isoMDS(dist(pca_dist))$points
     colnames(umap_center)<-c("isoMDS_1","isoMDS_2")
   }else{
     stop("wrong adjust method")
   }
-  
+
   umap_center<-data.frame(umap_center)
   sf1<-(max(umap_embedding[,1])-min(umap_embedding[,1]))/(max(umap_center[,1]) -min(umap_center[,1]))
   sf2<-(max(umap_embedding[,2])-min(umap_embedding[,2]))/(max(umap_center[,2]) -min(umap_center[,2]))
@@ -1843,9 +1844,9 @@ get_umap_embedding_adjust_tsMDS<-function(
     colMeans(as.matrix(umap_embedding[index_i,]))
   }))
   umap_embedding_adjust<-umap_embedding
-  
+
   if (rotate){
-    
+
     umap_center_flip<-umap_center
     umap_center_flip[,1]<-umap_center_flip[,1]*(-1)
     angle_var<-c()
@@ -1857,13 +1858,13 @@ get_umap_embedding_adjust_tsMDS<-function(
       R2to1<-Rotation2to1(
         umap_center1 = umap_center,
         umap_center2 = pca_center[,c(1,2)],
-        pos = i)  
-      
+        pos = i)
+
       R2to1_flip<-Rotation2to1(
         umap_center1 = umap_center_flip,
         umap_center2 = pca_center[,c(1,2)],
-        pos = i) 
-      
+        pos = i)
+
       angle_vec<-sapply(1:length(pca_anchor_index[[i]]), function(j){
         y<-as.numeric(pca_embedding[pca_anchor_index[[i]][j],c(1,2)]-pca_center[i,c(1,2)])%*%R2to1
         y<-as.numeric(y)
@@ -1872,11 +1873,11 @@ get_umap_embedding_adjust_tsMDS<-function(
         x<-as.numeric(x)
         y<-y/sqrt(sum(y^2))
         x<-x/sqrt(sum(x^2))
-        
+
         Rx2y <- rotation(x,y)
         Rx2y <- pmax(Rx2y,-1)
         Rx2y <- pmin(Rx2y,1)
-        
+
         if(Rx2y[2,1]>=0){
           i
           angle<-acos(Rx2y[1,1])
@@ -1893,10 +1894,10 @@ get_umap_embedding_adjust_tsMDS<-function(
         x<-as.numeric(x)
         y<-y/sqrt(sum(y^2))
         x<-x/sqrt(sum(x^2))
-        
+
         Rx2y <- rotation(x,y)
-        
-        
+
+
         if(Rx2y[2,1]>=0){
           angle<- acos(Rx2y[1,1])
         }else{
@@ -1904,7 +1905,7 @@ get_umap_embedding_adjust_tsMDS<-function(
         }
         angle
       })
-      
+
       angle_vec<-angle_vec[angle_vec>min(angle_vec)]
       angle_vec<-angle_vec[angle_vec<max(angle_vec)]
       angle_vec_flip<-angle_vec_flip[angle_vec_flip>min(angle_vec_flip)]
@@ -1921,7 +1922,7 @@ get_umap_embedding_adjust_tsMDS<-function(
       # use no flip
       angle_vec<-angle_no_flip
     }
-    
+
     for ( i in 1:N_label){
       anglex2y<-mean(angle_vec[[i]])
       #print(anglex2y)
@@ -1931,9 +1932,9 @@ get_umap_embedding_adjust_tsMDS<-function(
       index_i<-which(cluster_ == label_index[i])
       umap_embedding_adjust[index_i,]<-t(t(t(t(umap_embedding[index_i,])-as.numeric(umap_embedding_mean[i,]))%*%Rx2y)+as.numeric(umap_center[i,]))
     }
-    
+
   }else{
-    
+
     for(i in 1:N_label){
       index_i<-which(cluster_ == label_index[i])
       umap_embedding_adjust[index_i,]<-t(t(umap_embedding[index_i,])-as.numeric(umap_embedding_mean[i,]-umap_center[i,]))
@@ -1978,7 +1979,7 @@ adjustUMAP_via_tsMDS<-function(
     resolution = 0,
     verbose = F)[[1]]
   cluster_ <- as.numeric(as.character(cluster_))
-  
+
   N_label<-length(unique(cluster_))
   label_index<-sort(unique(cluster_))
   if(N_label <= 2){
@@ -1988,7 +1989,7 @@ adjustUMAP_via_tsMDS<-function(
     sum(cluster_==label_index[i])
   })
   N_sample<-nrow(pca_embedding)
-  
+
   main_index<-c(1:N_label)[which(cluster_size > 0.015*N_sample)]
   if (density_adjust & !is.null(global_umap_embedding)){
     prop_density<-sapply(1:N_label, function(i){
@@ -2015,13 +2016,13 @@ adjustUMAP_via_tsMDS<-function(
       umap_embedding[index_i,]<-t((t(cur_umap)-as.numeric(colMeans(cur_umap)))*cur_sf_here+as.numeric(colMeans(cur_umap)))
     }
   }
-  
+
   pca_center<-t(sapply(1:N_label, function(i){
     index_i<-which(cluster_ == label_index[i])
     colMeans(as.matrix(pca_embedding[index_i,]))
   }))
-  
-  
+
+
   pca_anchor_index<-lapply(1:N_label, function(i){
     index_i<-which(cluster_ == label_index[i])
     set.seed(seed.use)
@@ -2032,10 +2033,10 @@ adjustUMAP_via_tsMDS<-function(
   })
   pca_dist1<-Dist(pca_center)
   #pca_dist1<-as.matrix(parDist(pca_center))
-  
+
   pca_dist2<-pca_dist1
   pca_dist_main<-pca_dist1[main_index,main_index]
-  
+
   if(shrink_distance){
     remain_index<-c(1:N_label)[which(!c(1:N_label)%in%main_index)]
     #prop_<-sqrt(exp(cluster_size/max(cluster_size))/
@@ -2049,7 +2050,7 @@ adjustUMAP_via_tsMDS<-function(
       #pca_dist1[i,main_index]<-pca_dist1[i,main_index]*prop_[i]
       #pca_dist1[,i]<-pca_dist1[,i]*prop_[i]
       #pca_dist1[i,]<-pca_dist1[i,]*prop_[i]
-    } 
+    }
     for(i in remain_index){
       x<-main_index[which.min(pca_dist1[main_index,i])]
       min_x<-min(pca_dist1[,i])*0.5
@@ -2059,10 +2060,10 @@ adjustUMAP_via_tsMDS<-function(
   }
   if(shrink_distance){
     pam_res<-pam(x = pca_dist1,k = 2)
-    
+
     var_1<-sum(pca_center[which(pam_res$clustering==1),]^2)/sum(pam_res$clustering==1)
     var_2<-sum(pca_center[which(pam_res$clustering==2),]^2)/sum(pam_res$clustering==2)
-    
+
     if(var_1 >= var_2){
       clu1<-1
       clu2<-2
@@ -2082,7 +2083,7 @@ adjustUMAP_via_tsMDS<-function(
       pca_dist1[,i]<-pca_dist1[i,]
     }
   }
-  
+
   step1_res<-get_umap_embedding_adjust_tsMDS(
     pca_embedding=pca_embedding,
     pca_center=pca_center,
@@ -2108,12 +2109,12 @@ adjustUMAP_via_tsMDS<-function(
     resolution = 0,
     verbose = F)[[1]]
   cluster_1 <- as.numeric(as.character(cluster_1))
-  
+
   N_label1<-length(unique(cluster_1))
   if (N_label1 < N_label){
     ## First Adjustment
     label_index1<-sort(unique(cluster_1))
-    
+
     bad_index<-list()
     list_index<-0
     for ( i in 1:N_label1){
@@ -2125,7 +2126,7 @@ adjustUMAP_via_tsMDS<-function(
       }
     }
     for (i in 1:length(bad_index)){
-      
+
       pos<-min(bad_index[[i]])
       other_pos<-bad_index[[i]][bad_index[[i]]>pos]
       pos<-pos+1
@@ -2161,12 +2162,12 @@ adjustUMAP_via_tsMDS<-function(
       resolution = 0,
       verbose = F)[[1]]
     cluster_2 <- as.numeric(as.character(cluster_2))
-    
+
     N_label2<-length(unique(cluster_2))
     if(N_label2 < N_label){
       ## Second Adjustment Push Away
       label_index2<-sort(unique(cluster_2))
-      
+
       bad_index<-list()
       list_index<-0
       for ( i in 1:N_label2){
@@ -2202,7 +2203,7 @@ adjustUMAP_via_tsMDS<-function(
             umap_embedding_adjust[index_i,]<-t(t(umap_embedding_adjust[index_i,])-as.numeric(umap_center[cur_pos,])+as.numeric(cur_arrow))
           }
         }
-        
+
         snn_3<- FindNeighbors(object = umap_embedding_adjust,
           nn.method = "rann",
           verbose = F)$snn
@@ -2212,7 +2213,7 @@ adjustUMAP_via_tsMDS<-function(
         cluster_3 <- as.numeric(as.character(cluster_3))
         N_label3<-length(unique(cluster_3))
         label_index3<-sort(unique(cluster_3))
-        
+
         bad_index<-list()
         list_index<-0
         for ( i in 1:N_label3){
@@ -2223,7 +2224,7 @@ adjustUMAP_via_tsMDS<-function(
             bad_index[[list_index]]<-c(unique(cluster_[index_i3]))
           }
         }
-        
+
       }
       if(N_label3 < N_label){
         #if(verbose){
@@ -2240,11 +2241,11 @@ adjustUMAP_via_tsMDS<-function(
           dist_mat<-pdist(umap_center[pos,],umap_center)@dist
           target_distance<-min(dist_mat[dist_mat>=max(dist_mat[other_pos])])
           re_sf<-target_distance/max(dist_mat[other_pos])
-          
+
           umap_embedding_adjust<-umap_embedding_adjust*re_sf
         }
       }
-      
+
     }
   }
   return(umap_embedding_adjust)
@@ -2258,7 +2259,7 @@ adjustUMAP_via_tsMDS<-function(
 
 #' adjustUMAP
 #'
-#' Adjust UMAP to deal with distortion 
+#' Adjust UMAP to deal with distortion
 #'
 #' @details amazing umap
 #' @param expr_matrix character
@@ -2272,7 +2273,7 @@ adjustUMAP_via_tsMDS<-function(
 #' @importFrom stats cmdscale var as.dist dist
 #'
 #' @export
-#' 
+#'
 #' @examples
 #' a<-1
 #'
@@ -2328,7 +2329,7 @@ adjustUMAP<-function(
     newList<-list("umap" = umap_adjust,
       "tsMDS"=tsMDS_adjust)
     return(newList)
-  }else if (adjust_method == "umap"| 
+  }else if (adjust_method == "umap"|
       adjust_method == "Umap"|
       adjust_method == "UMAP"){
     umap_adjust<-adjustUMAP_via_umap(
@@ -2422,7 +2423,7 @@ ScaleFactor<-function(
   center_method = "mean",
   scale_factor_separation =3,
   return_factor=TRUE){
-  
+
   # sorted unique cluster label
   label_index<-sort(as.numeric(
     unique(as.character(cluster_label))))
@@ -2441,9 +2442,9 @@ ScaleFactor<-function(
         is not equal to 2*npcs")
     }
   }
-  
+
   if (center_method == "geometry"){
-    
+
     cluster_center<-t(sapply(1:N_label, function(i){
       index_i<-which(cluster_label == label_index[i])
       tmp<-sapply(1:(2*npcs), function(j){
@@ -2454,7 +2455,7 @@ ScaleFactor<-function(
         paste0("subPC_",1:npcs))
       tmp
     }))
-    
+
   }else if (center_method == "mean"){
     # cluster center by mean
     cluster_center<-t(sapply(1:N_label, function(i){
@@ -2463,27 +2464,27 @@ ScaleFactor<-function(
     }))
     colnames(cluster_center)<-c(paste0("PC_",1:npcs),
       paste0("subPC_",1:npcs))
-    
+
   }else{
     stop("center_method is chosen from geometry or mean")
   }
-  
+
   # distance matrix for cluster center
   cluster_center_dist<-Dist(cluster_center[,1:npcs])
   #cluster_center_dist<-as.matrix(parDist(cluster_center[,1:npcs]))
   diag(cluster_center_dist)<-NA
-  
+
   # pdist is used here, which is fast
   cluster_semi_d<-sapply(1:N_label, function(i){
     index_i<-which(cluster_label == label_index[i])
     max((pdist(cluster_center[i,(npcs+1):(2*npcs)],
       combined_embedding[index_i,(npcs+1):(2*npcs)]))@dist)
   })
-  
+
   scale_factor<-sapply(1:N_label, function(i){
     min(cluster_center_dist[i,],na.rm = T)/scale_factor_separation/cluster_semi_d[i]
   })
-  
+
   for ( i in 1:N_label){
     index_i<-which(cluster_label == label_index[i])
     combined_embedding[index_i,(1+npcs):(2*npcs)]<-
@@ -2542,7 +2543,7 @@ DoCluster<-function(
       verbose = verbose_more)[[1]]
     cluster_ <- as.numeric(as.character(cluster_))
     if (subcluster){
-      
+
       N_cluster<-length(unique(cluster_))
       subcluster_<-rep(NA,length(cluster_))
       for ( i in unique(cluster_)){
@@ -2625,6 +2626,7 @@ DoCluster<-function(
 #' @return nothing useful
 #'
 #' @importFrom Seurat FindVariableFeatures ScaleData RunPCA
+#' @importFrom mixhvg FindVariableFeaturesMix
 #'
 #'
 #' @examples
@@ -2646,7 +2648,7 @@ SubPCEmbedding<-function(
     unique(as.character(cluster_label))))
   # number of cluster
   N_label<-length(label_index)
-  
+
   # get PC for each cluster
   expr_cluster_pc<-list()
   hvg_list<-list()
@@ -2664,26 +2666,26 @@ SubPCEmbedding<-function(
     expr_tmp<-expr_matrix[,index_i]
     if(is.null(hvg_method)){
       tmp_hvg<-FindVariableFeaturesMix(expr_tmp,
-                                   nfeatures = nfeatures) 
+                                   nfeatures = nfeatures)
     }else{
       tmp_hvg<-FindVariableFeaturesMix(expr_tmp,method.names = hvg_method,
                                    nfeatures = nfeatures)
     }
-    
+
     expr_tmp<- NormalizeData(expr_tmp,verbose = F)
-    
+
     hvg_list[[i]]<-tmp_hvg
     hvg_name_list[[i]]<-rownames(expr_matrix)[tmp_hvg]
     expr_tmp<-expr_tmp[tmp_hvg,]
     expr_tmp <-ScaleData(expr_tmp,verbose = F)
-    
+
     suppressWarnings(
       expr_tmp <- RunPCA(
         object = expr_tmp,
         features = rownames(expr_tmp),
         npcs = npcs,
         verbose = F)@cell.embeddings)
-    
+
     # Get subgroup PC with scale factor(default to be 1)
     expr_cluster_pc[[i]]<-expr_tmp[,c(1:npcs)]
 
@@ -2727,13 +2729,13 @@ CombinePC<-function(PC_embedding,
   }
   npcs<-ncol(sub_PC_list[[1]])
   PC_embedding_combined<-PC_embedding
-  
+
   sub_PC_list_supp<-matrix(0,nrow = nrow(PC_embedding),
     ncol = npcs)
   sub_PC_list_supp<-data.frame(sub_PC_list_supp)
   rownames(sub_PC_list_supp)<-rownames(PC_embedding)
-  
-  
+
+
   for (i in c(1:N_label)){
     index_i<-which(cluster_label == label_index[i])
     if (is.null(scale_factor[1])){
@@ -2751,12 +2753,12 @@ CombinePC<-function(PC_embedding,
         #PC_embedding[index_i,]
       }
     }
-    
+
   }
-  
+
   PC_embedding_combined<-cbind(PC_embedding_combined,
     sub_PC_list_supp)
-  
+
   return(PC_embedding_combined)
 }
 
@@ -2865,7 +2867,7 @@ FormAdaptiveCombineList<-function(
     unique(as.character(cluster_label))))
   # number of cluster label
   N_label<-length(label_index)
-  
+
   ## Compare npcs with the cluster size
   size_cluster<-c()
   for ( i in 1:N_label){
@@ -2894,7 +2896,7 @@ FormAdaptiveCombineList<-function(
       unique(as.character(cluster_label))))
     # number of cluster label
     N_label<-length(label_index)
-    
+
     ## Compare npcs with the cluster size
     size_cluster<-c()
     for ( i in 1:N_label){
@@ -2902,14 +2904,14 @@ FormAdaptiveCombineList<-function(
         sum(cluster_label == label_index[i]))
     }
   }
-  
+
   if(check_differential){
     if(N_label == 1){
       newList<-list("cluster_label"= -1,
         "combined_embedding"=expr_matrix_pca)
       return(newList)
     }else{
-      ### Begin of else 
+      ### Begin of else
       cur_label<- N_label
       while(cur_label>1){
         for (i in 1:(cur_label-1)){
@@ -2918,7 +2920,7 @@ FormAdaptiveCombineList<-function(
           index_2<-which(cluster_label == label_index[cur_label])
           cur_differential_gene<-0
           cur_gene<-1
-          while (cur_differential_gene < differentail_gene_cutoff & 
+          while (cur_differential_gene < differentail_gene_cutoff &
               cur_gene <= N_gene){
             t_res<-t.test(expr_matrix[cur_gene,index_1],
               expr_matrix[cur_gene,index_2])
@@ -2940,20 +2942,20 @@ FormAdaptiveCombineList<-function(
           }
         }
         cur_label<-cur_label - 1
-        
+
       }
-      ### End of else 
+      ### End of else
     }
-    
-    
+
+
   }
-  
+
   if(N_label == 1){
     newList<-list("cluster_label"= -1,
       "combined_embedding"=expr_matrix_pca)
     return(newList)
   }
-  
+
   combined_embedding<-FormCombinedEmbedding(
     expr_matrix=expr_matrix,
     expr_matrix_pca=expr_matrix_pca,
@@ -2967,10 +2969,10 @@ FormAdaptiveCombineList<-function(
     newList<-list("cluster_label"= cluster_label,
       "combined_embedding"=combined_embedding)
     return(newList)
-  }  
+  }
   colnames(combined_embedding)<-c(paste0("Layer",stratification_count,"PC",1:npcs),
     paste0("Layer",(stratification_count+1),"PC",1:npcs))
-  
+
   cluster_label_list<-list()
   combined_embedding_list<-list()
   work_adaptive<-FALSE
@@ -3001,12 +3003,12 @@ FormAdaptiveCombineList<-function(
       if(ncol(tmp$combined_embedding)!=npcs){
         #print(ncol(tmp$combined_embedding))
         stop("combined_embedding size is wrong")
-      }  
+      }
     }
     rm(tmp)
   }
   if (work_adaptive){
-    
+
     if(max_ncol_sub < (2*npcs)){
       stop("combined_embedding size is wrong1")
     }else if (max_ncol_sub == (2*npcs)){
@@ -3020,7 +3022,7 @@ FormAdaptiveCombineList<-function(
       for ( i in 1:N_label){
         index_i<-which(cluster_label == label_index[i])
         cluster_label_sub[index_i]<-cluster_label_list[[i]]
-        
+
         combined_embedding_sub[index_i,
           1:ncol(combined_embedding_list[[i]])]<-
           combined_embedding_list[[i]]
@@ -3028,7 +3030,7 @@ FormAdaptiveCombineList<-function(
       newList<-list("cluster_label"= cbind(cluster_label,cluster_label_sub),
         "combined_embedding"=cbind(expr_matrix_pca,combined_embedding_sub))
       return(newList)
-      
+
     }else{
       ## cluster label list is matrix
       max_label_count<-0
@@ -3045,7 +3047,7 @@ FormAdaptiveCombineList<-function(
       combined_embedding_sub<-matrix(0,
         nrow = nrow(expr_matrix_pca),
         ncol = max_ncol_sub)
-      
+
       for ( i in 1:N_label){
         index_i<-which(cluster_label == label_index[i])
         if(is.null(dim(cluster_label_list[[i]]))){
@@ -3066,7 +3068,7 @@ FormAdaptiveCombineList<-function(
       return(newList)
     }
   }else{
-    
+
     newList<-list("cluster_label"= cluster_label,
       "combined_embedding"=combined_embedding)
     return(newList)
@@ -3111,26 +3113,26 @@ adaDimPlot<-function(
   shuffle_index<-sample(1:nrow(umap_embedding))
   umap_embedding<-umap_embedding[shuffle_index,]
   label<-label[shuffle_index]
-  
+
   umap_embedding<-data.frame(umap_embedding)
   if(is.null(colnames(umap_embedding))[1]){
-    colnames(umap_embedding)<-paste0("UMAP_",1:ncol(umap_embedding)) 
+    colnames(umap_embedding)<-paste0("UMAP_",1:ncol(umap_embedding))
     xynames<-colnames(umap_embedding)
   }else{
     xynames<-colnames(umap_embedding)
-    colnames(umap_embedding)<-paste0("UMAP_",1:ncol(umap_embedding)) 
+    colnames(umap_embedding)<-paste0("UMAP_",1:ncol(umap_embedding))
   }
   umap_embedding$label<-factor(label)
-  
+
   qual_col_pals <- brewer.pal.info[brewer.pal.info$category == 'qual',]
   col_vector <- unlist(mapply(brewer.pal,
     qual_col_pals$maxcolors,rownames(qual_col_pals)))
   if(color.mode==1){
     col_vector <- unique(col_vector)
-    col_vector[4]<-"#ffd000" 
+    col_vector[4]<-"#ffd000"
   }else if (color.mode==2){
     col_vector <- unique(col_vector)
-    col_vector <- col_vector[-4] 
+    col_vector <- col_vector[-4]
   }
   cpnum<-length(unique(label))%/%length(col_vector)+1
   col_vector<-rep(col_vector,cpnum)
@@ -3151,12 +3153,12 @@ adaDimPlot<-function(
   if(color.mode %in% c(1,2)){
     gg<-gg+
       scale_colour_manual(values =
-                            col_vector[c(1:length(unique(label)))]) 
+                            col_vector[c(1:length(unique(label)))])
   }
   if (!show.legend){
     gg<-gg+theme(legend.position="none")
   }
-  
+
   centers<-group_by(umap_embedding,label)
   centers<-summarise(centers,x = median(x = UMAP_1),
     y = median(x = UMAP_2),.groups = 'drop')
@@ -3205,14 +3207,14 @@ adaDimPlot2<-function(
   label<-label[shuffle_index]
   umap_embedding<-data.frame(umap_embedding)
   if(is.null(colnames(umap_embedding))[1]){
-    colnames(umap_embedding)<-paste0("UMAP_",1:ncol(umap_embedding)) 
+    colnames(umap_embedding)<-paste0("UMAP_",1:ncol(umap_embedding))
     xynames<-colnames(umap_embedding)
   }else{
     xynames<-colnames(umap_embedding)
-    colnames(umap_embedding)<-paste0("UMAP_",1:ncol(umap_embedding)) 
+    colnames(umap_embedding)<-paste0("UMAP_",1:ncol(umap_embedding))
   }
   umap_embedding$label<-label
-  
+
   gg<-ggplot(umap_embedding)+
     geom_point(aes(x = UMAP_1,
                    y = UMAP_2,
@@ -3244,6 +3246,7 @@ adaDimPlot2<-function(
 #' @return nothing useful
 #'
 #' @importFrom RColorBrewer brewer.pal brewer.pal.info
+#' @importFrom mixhvg FindVariableFeaturesMix
 #'
 #' @export
 #'
