@@ -64,7 +64,7 @@ savis<-function(
   expr_matrix,
   npcs = 20,
   nfeatures = 2000,
-  hvg_method = NULL,
+  hvg_method = "seuratv3",
   distance_metric = "euclidean",
   cluster_method = "louvain",
   resolution = 0.1,
@@ -768,7 +768,6 @@ RunSAVIS<-function(
   }
   print("stop sign")
   savis_embedding2<<-savis_embedding
-  objjj<<-object
   if(adjust_method != "all"){
     object@reductions$savis@cell.embeddings<-savis_embedding
   }else{
