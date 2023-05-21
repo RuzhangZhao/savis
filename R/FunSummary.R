@@ -29,8 +29,6 @@ pacman::p_load(Seurat,uwot,MASS,cluster,mixhvg,ggplot2,dplyr,Rfast,mize,glue,pdi
 #' @param check_differential The default is FALSE.
 #' @param verbose The default is TRUE.
 #' @param verbose_more More details are displayed. The default is FALSE.
-#' @param show_cluster The default is FALSE.
-#' @param return_cluster The default is FALSE.
 #' @param return_combined_PC The default is FALSE.
 #' @param compressed_storage Whether compress storage when returning. The default is FALSE.
 #' @param seed.use The default is 42L
@@ -80,8 +78,6 @@ savis<-function(
   global_umap_embedding = NULL,
   check_differential = FALSE,
   verbose = TRUE,
-  show_cluster = TRUE,
-  return_cluster = TRUE,
   return_combined_PC = FALSE,
   verbose_more = FALSE,
   compressed_storage = TRUE,
@@ -201,17 +197,13 @@ savis<-function(
     setTxtProgressBar(pb = pb, value = 6)
   }
   if(verbose){
-    if(show_cluster){
-      cat('\n')
-      print(paste0("Size of Cluster: ",size_cluster))
-    }
-  }
+    cat('\n')
+    print(paste0("Size of Cluster: ",size_cluster))}
 
   if(verbose){
     cat('\n')
     print("Calculating Local PCA...")
-    setTxtProgressBar(pb = pb, value = 8)
-  }
+    setTxtProgressBar(pb = pb, value = 8)}
 
   if(max_depth == 2 | adaptive == FALSE){
 
@@ -260,8 +252,10 @@ savis<-function(
     rm(expr_matrix)
     cluster_label<-umap_res$cluster_label
     if(is.null(dim(cluster_label)[1])){
+      cluster_label<-as.matrix(cluster_label,ncol=1)
+      colnames(cluster_label)<-"Layer2Cluster"
       combined_embedding<-data.frame(
-        "Layer2Cluster"=cluster_label,
+        cluster_label,
         umap_res$combined_embedding)
       if(ncol(umap_res$combined_embedding)!=(2*npcs)){
         stop("label and combined embedding size do not match")
@@ -364,12 +358,11 @@ savis<-function(
       rotate = adjust_rotate,
       seed.use = seed.use)
   }
-  if(return_cluster){
-    if(length(combined_embedding_list)>0){combined_embedding<-combined_embedding_list}
-      newList<-list("combined_embedding"=combined_embedding,
-                    "savis_embedding"=savis_embedding,
-                    "cluster_label"=cluster_label)
-  }else{newList<-savis_embedding}
+  
+  if(length(combined_embedding_list)>0){combined_embedding<-combined_embedding_list}
+  newList<-list("combined_embedding"=combined_embedding,
+                "savis_embedding"=savis_embedding,
+                "cluster_label"=cluster_label)
   
   if(verbose){
     cat('\n')
@@ -397,8 +390,6 @@ savis<-function(
 #' @param min_process_size The default is NULL.
 #' @param check_differential The default is FALSE.
 #' @param verbose The default is TRUE.
-#' @param show_cluster The default is FALSE.
-#' @param return_cluster The default is FALSE.
 #' @param verbose_more The default is FALSE.
 #'
 #'
@@ -430,15 +421,11 @@ RunPreSAVIS<-function(
   min_process_size = NULL,
   check_differential = FALSE,
   verbose = TRUE,
-  show_cluster = FALSE,
-  return_cluster = FALSE,
   verbose_more = FALSE
 ){
   default_assay<-DefaultAssay(object)
   print(paste0("PreSAVIS is based on the default assay: ",default_assay))
-  if(verbose){
-    pb <- txtProgressBar(min = 0, max = 10, style = 3, file = stderr())
-  }
+  if(verbose){pb<-txtProgressBar(min = 0,max = 10,style = 3,file = stderr())}
   nfeatures<-length(VariableFeatures(object))
   npcs<-ncol(object@reductions$pca@cell.embeddings)
 
@@ -484,10 +471,8 @@ RunPreSAVIS<-function(
     setTxtProgressBar(pb = pb, value = 3)
   }
   if(verbose){
-    if(show_cluster){
-      cat('\n')
-      print(paste0("Size of Cluster: ",size_cluster))
-    }
+    cat('\n')
+    print(paste0("Size of Cluster: ",size_cluster))
   }
 
   if(verbose){
@@ -543,6 +528,7 @@ RunPreSAVIS<-function(
 
     cluster_label<-umap_res$cluster_label
     if(is.null(dim(cluster_label)[1])){
+      cluster_label<-as.matrix(cluster_label,ncol=1)
       combined_embedding<-data.frame(
         "Layer2Cluster"=cluster_label,
         umap_res$combined_embedding)
@@ -589,7 +575,7 @@ RunPreSAVIS<-function(
   setClass("savis_class", representation(
     cell.embeddings = "matrix",
     combined_embedding = "matrix",
-    cluster_label = "numeric",
+    cluster_label = "matrix",
     global_cluster_label = "numeric",
     savis_embedding = "matrix",
     distance_metric = "character",
@@ -606,8 +592,7 @@ RunPreSAVIS<-function(
   if(verbose){
     cat('\n')
     print("Finished...")
-    setTxtProgressBar(pb = pb, value = 10)
-  }
+    setTxtProgressBar(pb = pb, value = 10)}
   return(object)
 }
 
