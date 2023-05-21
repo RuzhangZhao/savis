@@ -19,12 +19,12 @@ pacman::p_load(Seurat,uwot,MASS,cluster,mixhvg,ggplot2,dplyr,Rfast,mize,glue,pdi
 #' @param sep_ratio Scale factor used to distinguish global distance and local distance. The default is 3.
 #' @param min_process_size The smallest size of cluster which we use to stop the process of subcluster evaluation. The clusters whose sizes are less than the cutoff will be not be further explored. The default is NULL.
 #' @param run_adaUMAP Whether we run the adaptive visualization. If the criterion is The default is TRUE.
-#' @param adjust_UMAP The default is TRUE.
+#' @param adjust_SAVIS The default is TRUE.
 #' @param adjust_rotate Adjust the rotation of each cluster. The default is TRUE.
 #' @param shrink_distance Shrink distance of small clusters to avoid too much space in plot. The default is TRUE.
-#' @param density_adjust Adjust density of plot. The default is TRUE.
-#' @param density_adjust_via_global_umap Do density adjustment using the density from UMAP to make it comparable.
-#' @param adjust_scale_factor Scale factor for adjustment. The default is 0.9. The smaller value (>0) means larger illustration of clusters.
+#' @param adjust_density Adjust density of plot. The default is TRUE.
+#' @param adjust_density_via_global_umap Do density adjustment using the density from UMAP to make it comparable.
+#' @param adjust_density_scale_ratio Scale factor for adjustment. The default is 0.9. The smaller value (>0) means larger illustration of clusters.
 #' @param global_umap_embedding The default is NULL.
 #' @param check_differential The default is FALSE.
 #' @param verbose The default is TRUE.
@@ -69,12 +69,12 @@ savis<-function(
   max_depth = 3,
   sep_ratio = 3,
   min_process_size = NULL,
-  adjust_UMAP = TRUE,
+  adjust_SAVIS = TRUE,
   adjust_rotate = TRUE,
   shrink_distance = TRUE,
-  density_adjust = TRUE,
-  density_adjust_via_global_umap = TRUE,
-  adjust_scale_factor = 0.8,
+  adjust_density = TRUE,
+  adjust_density_via_global_umap = TRUE,
+  adjust_density_scale_ratio = 0.8,
   global_umap_embedding = NULL,
   check_differential = FALSE,
   verbose = TRUE,
@@ -330,14 +330,14 @@ savis<-function(
     metric = distance_metric,
     metric_count = metric_count,
     seed.use = seed.use)
-  if(adjust_UMAP){
+  if(adjust_SAVIS){
     if(verbose){
       cat('\n')
       print("Adjusting UMAP...")
       setTxtProgressBar(pb = pb, value = 17)
     }
     expr_matrix_umap = NULL
-    if(density_adjust_via_global_umap){
+    if(adjust_density_via_global_umap){
       if(is.null(global_umap_embedding)){
         expr_matrix_umap<-umap(
           X = expr_matrix_pca,
@@ -352,9 +352,9 @@ savis<-function(
       umap_embedding = umap_embedding,
       cluster_label = global_cluster_label,
       global_umap_embedding = expr_matrix_umap,
-      density_adjust = density_adjust,
+      adjust_density = adjust_density,
       shrink_distance = shrink_distance,
-      scale_factor = adjust_scale_factor,
+      scale_factor = adjust_density_scale_ratio,
       rotate = adjust_rotate,
       seed.use = seed.use)
   }
@@ -608,10 +608,10 @@ RunPreSAVIS<-function(
 #' @details This function argument to the function
 #'
 #' @param object sds
-#' @param adjust_UMAP = TRUE,
+#' @param adjust_SAVIS = TRUE,
 #' @param adjust_rotate = TRUE,
 #' @param shrink_distance = TRUE,
-#' @param density_adjust = TRUE,
+#' @param adjust_density = TRUE,
 #' @param verbose = TRUE,
 #' @param seed.use = 42L
 #'
@@ -631,12 +631,13 @@ RunPreSAVIS<-function(
 #'
 RunSAVIS<-function(
   object,
-  adjust_UMAP = TRUE,
+  adjust_SAVIS = TRUE,
   adjust_rotate = TRUE,
   shrink_distance = TRUE,
-  density_adjust = TRUE,
-  adjust_scale_factor =0.8,
+  adjust_density = TRUE,
+  adjust_density_scale_ratio =0.8,
   verbose = TRUE,
+  runSAVIS = TRUE,
   seed.use = 42L
 ){
   # change the seed.use to be integer
@@ -651,9 +652,9 @@ RunSAVIS<-function(
     stop("Please apply RunPreSAVIS before RunSAVIS")
   }
   if(!is.null(object@reductions$umap)){
-    density_adjust_via_global_umap<-TRUE
+    adjust_density_via_global_umap<-TRUE
   }else{
-    density_adjust_via_global_umap<-FALSE
+    adjust_density_via_global_umap<-FALSE
     warning("Suggest RunUMAP before RunSAVIS")
   }
   if(verbose){
@@ -666,19 +667,21 @@ RunSAVIS<-function(
     setTxtProgressBar(pb = pb, value = 3)
   }
   #print(metric_count)
-  savis_embedding<-RunAdaUMAP(
-    X = object@reductions$savis@combined_embedding,
-    metric = object@reductions$savis@distance_metric,
-    metric_count = object@reductions$savis@metric_count,
-    seed.use = seed.use)
-  if(adjust_UMAP){
+  if(runSAVIS){
+    savis_embedding<-RunAdaUMAP(
+      X = object@reductions$savis@combined_embedding,
+      metric = object@reductions$savis@distance_metric,
+      metric_count = object@reductions$savis@metric_count,
+      seed.use = seed.use)
+  }
+  if(adjust_SAVIS){
     if(verbose){
       cat('\n')
       print("Adjusting SAVIS...")
       setTxtProgressBar(pb = pb, value = 8)
     }
     expr_matrix_umap = NULL
-    if(density_adjust_via_global_umap){
+    if(adjust_density_via_global_umap){
       expr_matrix_umap<-object@reductions$umap@cell.embeddings
     }
     expr_matrix_pca<-object@reductions$pca@cell.embeddings
@@ -687,9 +690,9 @@ RunSAVIS<-function(
       umap_embedding = savis_embedding,
       cluster_label = object@reductions$savis@global_cluster_label,
       global_umap_embedding = expr_matrix_umap,
-      density_adjust = density_adjust,
+      adjust_density = adjust_density,
       shrink_distance = shrink_distance,
-      scale_factor = adjust_scale_factor,
+      scale_factor = adjust_density_scale_ratio,
       rotate = adjust_rotate,
       seed.use = seed.use)
   }
@@ -1236,7 +1239,7 @@ adjustUMAP_via_umap<-function(
   distance_metric = "euclidean",
   scale_factor = 0.9,
   rotate = TRUE,
-  density_adjust = TRUE,
+  adjust_density = TRUE,
   seed.use = 42,
   min_size = 100,
   maxit_push = NULL
@@ -1313,7 +1316,7 @@ adjustUMAP_via_umap<-function(
   }
   main_index<-main_index[order(main_index)]
 
-  if (density_adjust & !is.null(global_umap_embedding)){
+  if (adjust_density & !is.null(global_umap_embedding)){
     prop_density<-sapply(1:length(main_index), function(j){
       i<-main_index[j]
       index_i<-which(cluster_ == label_index_[i])
@@ -1337,7 +1340,7 @@ adjustUMAP_via_umap<-function(
       cur_umap<-umap_embedding[index_i,]
       umap_embedding[index_i,]<-t((t(cur_umap)-as.numeric(colMeans(cur_umap)))*0.5+as.numeric(colMeans(cur_umap)))
     }
-  }else if(density_adjust & is.null(global_umap_embedding)){
+  }else if(adjust_density & is.null(global_umap_embedding)){
     for(j in 1:length(main_index)){
       i<-main_index[j]
       index_i<-which(cluster_ == label_index_[i])
@@ -1610,7 +1613,7 @@ adjustUMAP<-function(
   distance_metric = "euclidean",
   scale_factor = 0.9,
   rotate = TRUE,
-  density_adjust = TRUE,
+  adjust_density = TRUE,
   shrink_distance = TRUE,
   shrink_factor = 0.2,
   seed.use = 42,
@@ -1628,7 +1631,7 @@ adjustUMAP<-function(
       distance_metric = distance_metric,
       scale_factor = scale_factor,
       rotate = rotate,
-      density_adjust = density_adjust,
+      adjust_density = adjust_density,
       seed.use = seed.use,
       min_size = min_size,
       maxit_push = maxit_push)
