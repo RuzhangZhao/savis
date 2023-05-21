@@ -673,6 +673,8 @@ RunSAVIS<-function(
       metric = object@reductions$savis@distance_metric,
       metric_count = object@reductions$savis@metric_count,
       seed.use = seed.use)
+    savis_embedding1<<-savis_embedding
+    object@reductions$savis@savis_embedding<-savis_embedding
   }
   if(adjust_SAVIS){
     if(verbose){
@@ -684,10 +686,9 @@ RunSAVIS<-function(
     if(adjust_density_via_global_umap){
       expr_matrix_umap<-object@reductions$umap@cell.embeddings
     }
-    expr_matrix_pca<-object@reductions$pca@cell.embeddings
     savis_embedding<-adjustUMAP(
-      pca_embedding = expr_matrix_pca,
-      umap_embedding = savis_embedding,
+      pca_embedding = object@reductions$pca@cell.embeddings,
+      umap_embedding =object@reductions$savis@savis_embedding,
       cluster_label = object@reductions$savis@global_cluster_label,
       global_umap_embedding = expr_matrix_umap,
       adjust_density = adjust_density,
@@ -918,10 +919,10 @@ def adaptive_dist_general_grad(x, y):
     random_state=seed.use,
     verbose = verbose
   )
-  umap_embedding<-umap$fit_transform(as.matrix(x = X))
-  umap_embedding<-data.frame(umap_embedding)
-  colnames(umap_embedding)<-paste0("SAVIS_",1:n.components)
-  umap_embedding
+  savis_embedding<-umap$fit_transform(as.matrix(x = X))
+  savis_embedding<-data.frame(savis_embedding)
+  colnames(savis_embedding)<-paste0("SAVIS_",1:n.components)
+  as.matrix(savis_embedding)
 }
 
 ### If the storage is compressed, it should be recovered
