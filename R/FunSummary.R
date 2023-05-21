@@ -15,13 +15,11 @@
 #' @param resolution The resolution for the louvain clustering. The resolution ranges from 0 to 1. The lower resolution means conservative clustering(smaller number of clusters), while the higher resolution means aggressive clustering. The default is 0.5.
 #' @param resolution_sub The resolution for the louvain clustering within subclusters, which means after the first step clustering and separation, we perform further clustering. The default is 0 because we are mainly interested in one step separation.
 #' @param adaptive Whether we will run adaptive visualization. If adaptive is FALSE, we are just doing UMAP. The default is TRUE.
-#' @param max_stratification The maximum level of stratification for subclustering. Set the maximum level to restrict too detailed exploration. The default is 3.
-#' @param scale_factor_separation Scale factor used to distinguish global distance and local distance. The default is 3.
-#' @param process_min_size The smallest size of cluster which we use to stop the process of subcluster evaluation. The clusters whose sizes are less than the cutoff will be not be further explored. The default is NULL.
-#' @param process_min_count The processed clusters are determined by the ranking of the size of clusters. Only further explore the clusters whose rankings are less than the process_min_count. The default is NULL.
+#' @param max_depth The maximum level of stratification for subclustering. Set the maximum level to restrict too detailed exploration. The default is 3.
+#' @param sep_ratio Scale factor used to distinguish global distance and local distance. The default is 3.
+#' @param min_process_size The smallest size of cluster which we use to stop the process of subcluster evaluation. The clusters whose sizes are less than the cutoff will be not be further explored. The default is NULL.
 #' @param run_adaUMAP Whether we run the adaptive visualization. If the criterion is The default is TRUE.
 #' @param adjust_UMAP The default is TRUE.
-#' @param adjust_method The default is "all". Select from c("umap","mds").
 #' @param adjust_rotate Adjust the rotation of each cluster. The default is TRUE.
 #' @param shrink_distance Shrink distance of small clusters to avoid too much space in plot. The default is TRUE.
 #' @param density_adjust Adjust density of plot. The default is TRUE.
@@ -62,32 +60,28 @@
 #'
 savis<-function(
   expr_matrix,
-  npcs = 20,
+  npcs = 30,
   nfeatures = 2000,
-  hvg_method = "seuratv3",
+  hvg_method = NULL,
   distance_metric = "euclidean",
   cluster_method = "louvain",
-  resolution = 0.1,
-  resolution_sub = 0,
-  #memory_save = FALSE,
+  resolution = 0.01,
+  resolution_sub = 0.01,
   adaptive = TRUE,
-  max_stratification = 3,
-  scale_factor_separation =3,
-  process_min_size = NULL,
-  process_min_count = NULL,
-  run_adaUMAP = TRUE,
+  max_depth = 3,
+  sep_ratio = 3,
+  min_process_size = NULL,
   adjust_UMAP = TRUE,
-  adjust_method = "all",
   adjust_rotate = TRUE,
   shrink_distance = TRUE,
   density_adjust = TRUE,
-  density_adjust_via_global_umap = FALSE,
-  adjust_scale_factor = 0.9,
+  density_adjust_via_global_umap = TRUE,
+  adjust_scale_factor = 0.8,
   global_umap_embedding = NULL,
   check_differential = FALSE,
   verbose = TRUE,
-  show_cluster = FALSE,
-  return_cluster = FALSE,
+  show_cluster = TRUE,
+  return_cluster = TRUE,
   return_combined_PC = FALSE,
   verbose_more = FALSE,
   compressed_storage = TRUE,
@@ -103,10 +97,10 @@ savis<-function(
   if(!is.integer(seed.use)){
     seed.use<-as.integer(seed.use)
   }
-  if(max_stratification <= 1){
+  if(max_depth <= 1){
     stop("Please directly use umap: savis
       supports adaptive visualization for
-      max_stratification larger than 1.")
+      max_depth larger than 1.")
   }
 
   if (nrow(expr_matrix) < nfeatures){
@@ -219,7 +213,7 @@ savis<-function(
     setTxtProgressBar(pb = pb, value = 8)
   }
 
-  if(max_stratification == 2 | adaptive == FALSE){
+  if(max_depth == 2 | adaptive == FALSE){
 
     combined_embedding<-FormCombinedEmbedding(
       expr_matrix=expr_matrix,
@@ -229,20 +223,14 @@ savis<-function(
       nfeatures =nfeatures,
       hvg_method = hvg_method,
       #center_method = center_method,
-      scale_factor_separation=scale_factor_separation)
+      sep_ratio=sep_ratio)
     #rm(expr_matrix)
   }
   if(adaptive){
-    if (!is.null(process_min_count)){
-      process_min_size<-sort(size_cluster,decreasing = T)[process_min_count]
-    }else{
-      if (is.null(process_min_size)){
-        process_min_size<-mean(size_cluster)
-      }
-    }
+    if(is.null(min_process_size)){min_process_size<-2*npcs}
     if(verbose){
       cat('\n')
-      print(paste0("Process_min_size: ",process_min_size))
+      print(paste0("min_process_size: ",min_process_size))
       setTxtProgressBar(pb = pb, value = 9.5)
     }
 
@@ -256,14 +244,14 @@ savis<-function(
     umap_res<-FormAdaptiveCombineList(
       expr_matrix=expr_matrix,
       expr_matrix_pca=expr_matrix_pca,
-      max_stratification=max_stratification,
+      max_depth=max_depth,
       stratification_count=1,
-      scale_factor_separation = scale_factor_separation,
+      sep_ratio = sep_ratio,
       resolution=resolution_sub,
       cluster_method=cluster_method,
       npcs=npcs,
       nfeatures=nfeatures,
-      process_min_size=process_min_size,
+      min_process_size=min_process_size,
       hvg_method = hvg_method,
       do_cluster = FALSE,
       cluster_label = cluster_label,
@@ -315,7 +303,7 @@ savis<-function(
     metric_count <- 1
   }
 
-
+  
   combined_embedding_list<-list()
   if(compressed_storage){
     if(metric_count > 1){
@@ -337,90 +325,52 @@ savis<-function(
       }
     }
   }
-
-  if(!run_adaUMAP){
-    if(return_cluster){
-      if(length(combined_embedding_list)>0){
-        newList<-list("combined_embedding"=combined_embedding_list,
-          "cluster_label"=cluster_label)
-      }else{
-        newList<-list("combined_embedding"=combined_embedding,
-          "cluster_label"=cluster_label)
-      }
-    }else{
-      if(length(combined_embedding_list)>0){
-        newList<-combined_embedding_list
-      }else{
-        newList<-combined_embedding
-      }
-    }
-  }else{
+  if(verbose){
+    cat('\n')
+    print("Running Adaptive UMAP...")
+    setTxtProgressBar(pb = pb, value = 12)
+  }
+  #print(metric_count)
+  umap_embedding<-RunAdaUMAP(
+    X = combined_embedding,
+    metric = distance_metric,
+    metric_count = metric_count,
+    seed.use = seed.use)
+  if(adjust_UMAP){
     if(verbose){
       cat('\n')
-      print("Running Adaptive UMAP...")
-      setTxtProgressBar(pb = pb, value = 12)
+      print("Adjusting UMAP...")
+      setTxtProgressBar(pb = pb, value = 17)
     }
-    #print(metric_count)
-    umap_embedding<-RunAdaUMAP(
-      X = combined_embedding,
-      metric = distance_metric,
-      metric_count = metric_count,
+    expr_matrix_umap = NULL
+    if(density_adjust_via_global_umap){
+      if(is.null(global_umap_embedding)){
+        expr_matrix_umap<-umap(
+          X = expr_matrix_pca,
+          a = 1.8956,
+          b = 0.8006,
+          metric = distance_metric)
+      }else{expr_matrix_umap<-global_umap_embedding}
+    }
+    
+    savis_embedding<-adjustUMAP(
+      pca_embedding = expr_matrix_pca,
+      umap_embedding = umap_embedding,
+      cluster_label = global_cluster_label,
+      global_umap_embedding = expr_matrix_umap,
+      density_adjust = density_adjust,
+      shrink_distance = shrink_distance,
+      scale_factor = adjust_scale_factor,
+      rotate = adjust_rotate,
       seed.use = seed.use)
-    if(adjust_UMAP){
-      if(verbose){
-        cat('\n')
-        print("Adjusting UMAP...")
-        setTxtProgressBar(pb = pb, value = 17)
-      }
-      expr_matrix_umap = NULL
-      if(density_adjust_via_global_umap){
-        if(is.null(global_umap_embedding)){
-          expr_matrix_umap<-umap(
-            X = expr_matrix_pca,
-            a = 1.8956,
-            b = 0.8006,
-            metric = distance_metric
-          )
-        }else{
-          expr_matrix_umap<-global_umap_embedding
-        }
-      }
-      #delete this
-      #umap_embedding<<-umap_embedding
-      #expr_matrix_pca<<-expr_matrix_pca
-      #global_cluster_label<<-global_cluster_label
-
-      umap_embedding<-adjustUMAP(
-        pca_embedding = expr_matrix_pca,
-        umap_embedding = umap_embedding,
-        cluster_label = global_cluster_label,
-        global_umap_embedding = expr_matrix_umap,
-        adjust_method = adjust_method,
-        density_adjust = density_adjust,
-        shrink_distance = shrink_distance,
-        scale_factor = adjust_scale_factor,
-        rotate = adjust_rotate,
-        seed.use = seed.use)
-    }
-    if(return_cluster){
-      if(length(combined_embedding_list)>0){
-        newList<-list("combined_embedding"=combined_embedding_list,
-          "savis_embedding"=umap_embedding,
-          "cluster_label"=cluster_label)
-      }else{
-        newList<-list("combined_embedding"=combined_embedding,
-          "savis_embedding"=umap_embedding,
-          "cluster_label"=cluster_label)
-      }
-      #newList<-list("savis_embedding"=umap_embedding,
-       # "cluster_label"=cluster_label)
-    }else{
-      newList<-umap_embedding
-    }
   }
-
-
-
+  if(return_cluster){
+    if(length(combined_embedding_list)>0){combined_embedding<-combined_embedding_list}
+      newList<-list("combined_embedding"=combined_embedding,
+                    "savis_embedding"=savis_embedding,
+                    "cluster_label"=cluster_label)
+  }else{newList<-savis_embedding}
+  
   if(verbose){
     cat('\n')
     print("Finished...")
@@ -442,10 +392,9 @@ savis<-function(
 #' @param cluster_method The default is "louvain". User can choose from c("louvain","spectral"). But "louvain" performs much better.
 #' @param resolution The resolution for The default is 0.5.
 #' @param resolution_sub The default is 0.
-#' @param max_stratification The default is 3.
-#' @param scale_factor_separation The default is 3.
-#' @param process_min_size The default is NULL.
-#' @param process_min_count The default is NULL.
+#' @param max_depth The default is 3.
+#' @param sep_ratio The default is 3.
+#' @param min_process_size The default is NULL.
 #' @param check_differential The default is FALSE.
 #' @param verbose The default is TRUE.
 #' @param show_cluster The default is FALSE.
@@ -473,13 +422,12 @@ RunPreSAVIS<-function(
   hvg_method = NULL,
   distance_metric = "euclidean",
   cluster_method = "louvain",
-  resolution = 0.1,
-  resolution_sub = 0,
+  resolution = 0.01,
+  resolution_sub = 0.01,
   adaptive = TRUE,
-  max_stratification = 3,
-  scale_factor_separation =3,
-  process_min_size = NULL,
-  process_min_count = NULL,
+  max_depth = 3,
+  sep_ratio = 3,
+  min_process_size = NULL,
   check_differential = FALSE,
   verbose = TRUE,
   show_cluster = FALSE,
@@ -494,10 +442,10 @@ RunPreSAVIS<-function(
   nfeatures<-length(VariableFeatures(object))
   npcs<-ncol(object@reductions$pca@cell.embeddings)
 
-  if(max_stratification == 1){
+  if(max_depth == 1){
     stop("Please directly use umap: savis
       supports adaptive visualization for
-      max_stratification larger than 1.")
+      max_depth larger than 1.")
   }
 
   if(verbose){
@@ -547,7 +495,7 @@ RunPreSAVIS<-function(
     print("Calculating Local PCA...")
     setTxtProgressBar(pb = pb, value = 4)
   }
-  if(max_stratification == 2 | adaptive == FALSE){
+  if(max_depth == 2 | adaptive == FALSE){
 
     combined_embedding<-FormCombinedEmbedding(
       expr_matrix=object@assays[[default_assay]]@counts,
@@ -557,20 +505,14 @@ RunPreSAVIS<-function(
       nfeatures =nfeatures,
       hvg_method=hvg_method,
       #center_method = center_method,
-      scale_factor_separation=scale_factor_separation)
+      sep_ratio=sep_ratio)
 
   }
   if(adaptive){
-    if (!is.null(process_min_count)){
-      process_min_size<-sort(size_cluster,decreasing = T)[process_min_count]
-    }else{
-      if (is.null(process_min_size)){
-        process_min_size<-mean(size_cluster)
-      }
-    }
+    if (is.null(min_process_size)){min_process_size<-2*npcs}
     if(verbose){
       cat('\n')
-      print(paste0("Process_min_size: ",process_min_size))
+      print(paste0("min_process_size: ",min_process_size))
       setTxtProgressBar(pb = pb, value = 5)
     }
 
@@ -585,14 +527,14 @@ RunPreSAVIS<-function(
     umap_res<-FormAdaptiveCombineList(
       expr_matrix=object@assays[[default_assay]]@counts,
       expr_matrix_pca=expr_matrix_pca,
-      max_stratification=max_stratification,
+      max_depth=max_depth,
       stratification_count=1,
-      scale_factor_separation = scale_factor_separation,
+      sep_ratio = sep_ratio,
       resolution=resolution_sub,
       cluster_method=cluster_method,
       npcs=npcs,
       nfeatures=nfeatures,
-      process_min_size=process_min_size,
+      min_process_size=min_process_size,
       hvg_method = hvg_method,
       do_cluster = FALSE,
       cluster_label = cluster_label,
@@ -643,7 +585,7 @@ RunPreSAVIS<-function(
       combined_embedding)
     metric_count <- 1
   }
-
+  print("I am here ")
   setClass("savis_class", representation(
     cell.embeddings = "matrix",
     combined_embedding = "matrix",
@@ -651,9 +593,7 @@ RunPreSAVIS<-function(
     global_cluster_label = "numeric",
     savis_embedding = "matrix",
     distance_metric = "character",
-    metric_count = "numeric",
-    cell.embeddings.tsMDS.adjust = "matrix",
-    cell.embeddings.umap.adjust = "matrix"))
+    metric_count = "numeric"))
   savis_pre <- new("savis_class",
     combined_embedding = as.matrix(combined_embedding),
     cluster_label = cluster_label,
@@ -684,7 +624,6 @@ RunPreSAVIS<-function(
 #'
 #' @param object sds
 #' @param adjust_UMAP = TRUE,
-#' @param adjust_method = "all",
 #' @param adjust_rotate = TRUE,
 #' @param shrink_distance = TRUE,
 #' @param density_adjust = TRUE,
@@ -708,11 +647,10 @@ RunPreSAVIS<-function(
 RunSAVIS<-function(
   object,
   adjust_UMAP = TRUE,
-  adjust_method = "all",
   adjust_rotate = TRUE,
   shrink_distance = TRUE,
   density_adjust = TRUE,
-  adjust_scale_factor =0.9,
+  adjust_scale_factor =0.8,
   verbose = TRUE,
   seed.use = 42L
 ){
@@ -721,17 +659,22 @@ RunSAVIS<-function(
     seed.use<-as.integer(seed.use)
   }
   default_assay<-DefaultAssay(object)
+  if(is.null(object@reductions$pca)){
+    stop("Please apply RunPCA before RunSAVIS")
+  }
   if(is.null(object@reductions$savis)){
     stop("Please apply RunPreSAVIS before RunSAVIS")
-  }
-  if(verbose){
-    pb <- txtProgressBar(min = 0, max = 10, style = 3, file = stderr())
   }
   if(!is.null(object@reductions$umap)){
     density_adjust_via_global_umap<-TRUE
   }else{
     density_adjust_via_global_umap<-FALSE
+    warning("Suggest RunUMAP before RunSAVIS")
   }
+  if(verbose){
+    pb <- txtProgressBar(min = 0, max = 10, style = 3, file = stderr())
+  }
+  
   if(verbose){
     cat('\n')
     print("Running SAVIS with Adaptive Settings...")
@@ -759,21 +702,15 @@ RunSAVIS<-function(
       umap_embedding = savis_embedding,
       cluster_label = object@reductions$savis@global_cluster_label,
       global_umap_embedding = expr_matrix_umap,
-      adjust_method = adjust_method,
       density_adjust = density_adjust,
       shrink_distance = shrink_distance,
       scale_factor = adjust_scale_factor,
       rotate = adjust_rotate,
       seed.use = seed.use)
   }
-  print("stop sign")
-  savis_embedding2<<-savis_embedding
-  if(adjust_method != "all"){
-    object@reductions$savis@cell.embeddings<-savis_embedding
-  }else{
-    object@reductions$savis@cell.embeddings<-savis_embedding$tsMDS
-    object@reductions$savis@cell.embeddings.umap.adjust<-savis_embedding$umap
-  }
+  
+  object@reductions$savis@cell.embeddings<-savis_embedding
+  
   if(verbose){
     cat('\n')
     print("Finished...")
@@ -1029,133 +966,6 @@ get_matrix_from_list<-function(
 }
 
 
-#' tsMDS
-#'
-#' two step MDS
-#'
-#' @importFrom stats cmdscale dist
-#' @importFrom Rfast Dist
-#' @importFrom mize mize
-#' @importFrom glue glue
-#' @export
-#'
-#' @examples
-#' a<-1
-#'
-tsMDS<-function(
-  dist_full,
-  main_index,
-  dist_main=NULL){
-  N<-nrow(dist_full)
-  if(is.null(dist_main)){
-    dist_main<-dist_full[main_index,main_index]
-  }
-  main_initial<-cmdscale(dist(dist_main),k=2)
-  ### First Step of two-step MDS
-  cost_fun <- function(R, D) {
-    diff2 <- (R - D) ^ 2
-    sum(diff2) * 0.5
-  }
-
-  cost_grad <- function(R, D, y) {
-    K <- (R - D) / (D + 1.e-10)
-
-    G <- matrix(nrow = nrow(y), ncol = ncol(y))
-
-    for (i in 1:nrow(y)) {
-      dyij <- sweep(-y, 2, -y[i, ])
-      G[i, ] <- apply(dyij * K[, i], 2, sum)
-    }
-
-    as.vector(t(G)) * -2
-  }
-
-  mmds_fn <- function(par) {
-    R <- dist_main
-    y <- matrix(par, ncol = 2, byrow = TRUE)
-    D <- Dist(y)
-    #D <- as.matrix(parDist(y))
-    cost_fun(R, D)
-  }
-
-  mmds_gr <- function(par) {
-    R <- dist_main
-    y <- matrix(par, ncol = 2, byrow = TRUE)
-    D <- Dist(y)
-    #D <- as.matrix(parDist(y))
-
-    cost_grad(R, D, y)
-  }
-
-  initial_val_main<-c(t(main_initial))
-  res_main <- mize(initial_val_main, list(fn = mmds_fn, gr = mmds_gr),
-    method = "L-BFGS", verbose = FALSE,
-    grad_tol = 1e-5, check_conv_every = 10)
-
-  main_mds<-matrix(res_main$par, ncol = 2, byrow = TRUE)
-
-  ### Second Step of two-step MDS
-  remain_index<-c(1:N)[which(!c(1:N)%in%main_index)]
-  if(length(remain_index) == 0){
-    tsMDS_res<-main_mds
-    return(tsMDS_res)
-  }else if(length(remain_index) == 1){
-    remain_initial<-c(0,0)
-  }else if(length(remain_index) == 2){
-    remain_initial<-matrix(rep(0,4),2,2)
-  }else{
-    dist_remain<-dist_full[remain_index,remain_index]
-    remain_initial<-cmdscale(dist(dist_remain),k=2)
-  }
-    cost_fun <- function(R, D) {
-      diff2 <- (R - D) ^ 2
-      sum(diff2) * 0.5
-    }
-    cost_grad1 <- function(R, D, y1, y2) {
-      K <- (R - D) / (D + 1.e-10)
-      y<-rbind(y1,y2)
-      G <- matrix(nrow = nrow(y)-nrow(y1), ncol = ncol(y))
-
-      for (i in 1:(nrow(y)-nrow(y1))) {
-        i1<-nrow(y1)+i
-        dyij <- sweep(-y, 2, -y[i1, ])
-        G[i, ] <- apply(dyij * K[, i1], 2, sum)
-      }
-
-      as.vector(t(G)) * -2
-    }
-
-    mmds_fn <- function(par) {
-      R <- dist_full
-      y1<- main_mds
-      y2 <- matrix(par, ncol = 2, byrow = TRUE)
-      y<-rbind(y1,y2)
-      D <- Dist(y)
-      #D <- as.matrix(parDist(y))
-      cost_fun(R, D)
-    }
-
-    mmds_gr <- function(par) {
-      R <- dist_full
-      y1<- main_mds
-      y2 <- matrix(par, ncol = 2, byrow = TRUE)
-      y<-rbind(y1,y2)
-      D <- Dist(y)
-      #D <- as.matrix(parDist(y))
-      cost_grad1(R, D, y1, y2)
-    }
-    initial_val_remain<-c(t(remain_initial))
-
-    res_remain <- mize(initial_val_remain, list(fn = mmds_fn, gr = mmds_gr),
-      method = "L-BFGS", verbose = FALSE,
-      grad_tol = 1e-5, check_conv_every = 10)
-    remain_mds<-matrix(res_remain$par, ncol = 2, byrow = TRUE)
-
-    tsMDS_res<-rbind(main_mds,remain_mds)
-
-
-  tsMDS_res
-}
 
 
 ########## newly added part for UMAP adjust
@@ -1204,9 +1014,6 @@ Detect_edge<-function(
   new_edge_index
 }
 
-#' tsMDS
-#'
-#' two step MDS
 #'
 #' @importFrom pdist pdist
 #'
@@ -1787,494 +1594,6 @@ adjustUMAP_via_umap<-function(
 }
 
 
-get_umap_embedding_adjust_tsMDS<-function(
-  pca_embedding,
-  pca_center,
-  pca_anchor_index,
-  pca_dist,
-  umap_embedding,
-  N_label,
-  cluster_,
-  label_index,
-  adjust_method = "tsMDS",
-  main_index = NULL,
-  pca_dist_main=NULL,
-  distance_metric = "euclidean",
-  scale_factor = 0.9,
-  rotate = TRUE,
-  seed.use = 42
-){
-  Rotation2to1<-function(umap_center1,umap_center2,pos){
-    N_label<-nrow(umap_center1)
-    umap_center1_tmp<-t(t(umap_center1[-pos,])-as.numeric(umap_center1[pos,]))
-    weight_1<-1/pdist(umap_center1_tmp,c(0,0))@dist
-    weight_1<-weight_1/sum(weight_1)
-    umap_center2_tmp<-t(t(umap_center2[-pos,])-as.numeric(umap_center2[pos,]))
-    #weight_2<-1/pdist(umap_center2_tmp,c(0,0))@dist
-    #weight_2<-weight_2/sum(weight_2)
-    angles<-sapply(1:(N_label-1), function(i){
-
-      umap1<-umap_center1_tmp[i,]
-      umap2<-umap_center2_tmp[i,]
-      umap1<-umap1/sqrt(sum(umap1^2))
-      umap2<-umap2/sqrt(sum(umap2^2))
-
-      Rumap2toumap1<-rotation(umap2,umap1)
-      Rumap2toumap1 <- pmax(Rumap2toumap1,-1)
-      Rumap2toumap1 <- pmin(Rumap2toumap1,1)
-      angle<-acos(Rumap2toumap1[1,1])
-
-      if(Rumap2toumap1[2,1]>=0){
-        angle<-acos(Rumap2toumap1[1,1])
-      }else{
-        angle<- -acos(Rumap2toumap1[1,1])
-      }
-      angle
-    })
-    #angle2to1<-mean(angles)
-    #angle2to1<-median(angles)
-    angle2to1<-sum(angles*weight_1)
-    R2to1<-diag(cos(angle2to1),2)
-    R2to1[2,1]<-sin(angle2to1)
-    R2to1[1,2]<- -R2to1[2,1]
-    R2to1
-  }
-
-  if (adjust_method == "tsMDS"){
-    set.seed(seed.use)
-    umap_center<-tsMDS(dist_full = pca_dist,
-      main_index = main_index,
-      dist_main = pca_dist_main)
-    colnames(umap_center)<-c("tsMDS_1","tsMDS_2")
-  }else if (adjust_method == "isoMDS"){
-    umap_center<-isoMDS(dist(pca_dist))$points
-    colnames(umap_center)<-c("isoMDS_1","isoMDS_2")
-  }else{
-    stop("wrong adjust method")
-  }
-
-  umap_center<-data.frame(umap_center)
-  sf1<-(max(umap_embedding[,1])-min(umap_embedding[,1]))/(max(umap_center[,1]) -min(umap_center[,1]))
-  sf2<-(max(umap_embedding[,2])-min(umap_embedding[,2]))/(max(umap_center[,2]) -min(umap_center[,2]))
-  umap_center[,1]<-umap_center[,1]*sf1*scale_factor
-  umap_center[,2]<-umap_center[,2]*sf2*scale_factor
-  umap_embedding_mean<-t(sapply(1:N_label, function(i){
-    index_i<-which(cluster_ == label_index[i])
-    colMeans(as.matrix(umap_embedding[index_i,]))
-  }))
-  umap_embedding_adjust<-umap_embedding
-
-  if (rotate){
-
-    umap_center_flip<-umap_center
-    umap_center_flip[,1]<-umap_center_flip[,1]*(-1)
-    angle_var<-c()
-    weight_sample<-c()
-    angle_no_flip<-list()
-    angle_flip<-list()
-    for (i in 1:N_label){
-      weight_sample<-c(weight_sample,sum(cluster_ == label_index[i]))
-      R2to1<-Rotation2to1(
-        umap_center1 = umap_center,
-        umap_center2 = pca_center[,c(1,2)],
-        pos = i)
-
-      R2to1_flip<-Rotation2to1(
-        umap_center1 = umap_center_flip,
-        umap_center2 = pca_center[,c(1,2)],
-        pos = i)
-
-      angle_vec<-sapply(1:length(pca_anchor_index[[i]]), function(j){
-        y<-as.numeric(pca_embedding[pca_anchor_index[[i]][j],c(1,2)]-pca_center[i,c(1,2)])%*%R2to1
-        y<-as.numeric(y)
-        y<-y/sqrt(sum(y^2))
-        x<-umap_embedding[pca_anchor_index[[i]][j],]-umap_embedding_mean[i,]
-        x<-as.numeric(x)
-        y<-y/sqrt(sum(y^2))
-        x<-x/sqrt(sum(x^2))
-
-        Rx2y <- rotation(x,y)
-        Rx2y <- pmax(Rx2y,-1)
-        Rx2y <- pmin(Rx2y,1)
-
-        if(Rx2y[2,1]>=0){
-          i
-          angle<-acos(Rx2y[1,1])
-        }else{
-          angle<- - acos(Rx2y[1,1])
-        }
-        angle
-      })
-      angle_vec_flip<-sapply(1:length(pca_anchor_index[[i]]), function(j){
-        y<-as.numeric(pca_embedding[pca_anchor_index[[i]][j],c(1,2)]-pca_center[i,c(1,2)])%*%R2to1_flip
-        y<-as.numeric(y)
-        y<-y/sqrt(sum(y^2))
-        x<-umap_embedding[pca_anchor_index[[i]][j],]-umap_embedding_mean[i,]
-        x<-as.numeric(x)
-        y<-y/sqrt(sum(y^2))
-        x<-x/sqrt(sum(x^2))
-
-        Rx2y <- rotation(x,y)
-
-
-        if(Rx2y[2,1]>=0){
-          angle<- acos(Rx2y[1,1])
-        }else{
-          angle<- -1*acos(Rx2y[1,1])
-        }
-        angle
-      })
-
-      angle_vec<-angle_vec[angle_vec>min(angle_vec)]
-      angle_vec<-angle_vec[angle_vec<max(angle_vec)]
-      angle_vec_flip<-angle_vec_flip[angle_vec_flip>min(angle_vec_flip)]
-      angle_vec_flip<-angle_vec_flip[angle_vec_flip<max(angle_vec_flip)]
-      angle_no_flip[[i]]<- angle_vec
-      angle_flip[[i]] <- angle_vec_flip
-      angle_var<-rbind(angle_var,(c(var(angle_vec),var(angle_vec_flip))))
-    }
-    weight_sample<-weight_sample/sum(weight_sample)
-    if (sum(angle_var[,1]*weight_sample)>=sum(angle_var[,2]*weight_sample)){
-      # use flip
-      angle_vec<-angle_flip
-    }else{
-      # use no flip
-      angle_vec<-angle_no_flip
-    }
-
-    for ( i in 1:N_label){
-      anglex2y<-mean(angle_vec[[i]])
-      #print(anglex2y)
-      Rx2y<-diag(cos(anglex2y),2)
-      Rx2y[2,1]<-sin(anglex2y)
-      Rx2y[1,2]<- -Rx2y[2,1]
-      index_i<-which(cluster_ == label_index[i])
-      umap_embedding_adjust[index_i,]<-t(t(t(t(umap_embedding[index_i,])-as.numeric(umap_embedding_mean[i,]))%*%Rx2y)+as.numeric(umap_center[i,]))
-    }
-
-  }else{
-
-    for(i in 1:N_label){
-      index_i<-which(cluster_ == label_index[i])
-      umap_embedding_adjust[index_i,]<-t(t(umap_embedding[index_i,])-as.numeric(umap_embedding_mean[i,]-umap_center[i,]))
-    }
-  }
-  newList<-list("umap_center"=umap_center,
-    "umap_embedding_adjust"=umap_embedding_adjust)
-  return(newList)
-}
-
-
-#' @importFrom Seurat FindNeighbors FindClusters
-#' @importFrom pdist pdist
-adjustUMAP_via_tsMDS<-function(
-  pca_embedding,
-  umap_embedding,
-  global_umap_embedding = NULL,
-  distance_metric = "euclidean",
-  scale_factor = 0.9,
-  rotate = TRUE,
-  density_adjust = TRUE,
-  shrink_distance = TRUE,
-  adjust_method = "tsMDS",
-  shrink_factor = 0.2,
-  seed.use = 42,
-  min_size = 100,
-  maxit_push = NULL
-){
-  if(!is.matrix(pca_embedding)){
-    pca_embedding<-as.matrix(pca_embedding)
-  }
-  if(!is.matrix(umap_embedding)){
-    umap_embedding<-as.matrix(umap_embedding)
-  }
-  if(is.null(rownames(umap_embedding)[1])){
-    rownames(umap_embedding)<-1:nrow(umap_embedding)
-  }
-  snn_<- FindNeighbors(object = umap_embedding,
-    nn.method = "rann",
-    verbose = F)$snn
-  cluster_ <- FindClusters(snn_,
-    resolution = 0,
-    verbose = F)[[1]]
-  cluster_ <- as.numeric(as.character(cluster_))
-
-  N_label<-length(unique(cluster_))
-  label_index<-sort(unique(cluster_))
-  if(N_label <= 2){
-    return(umap_embedding)
-  }
-  cluster_size<-sapply(1:N_label, function(i){
-    sum(cluster_==label_index[i])
-  })
-  N_sample<-nrow(pca_embedding)
-
-  main_index<-c(1:N_label)[which(cluster_size > 0.015*N_sample)]
-  if (density_adjust & !is.null(global_umap_embedding)){
-    prop_density<-sapply(1:N_label, function(i){
-      index_i<-which(cluster_ == label_index[i])
-      set.seed(seed.use)
-      sample_index_i<-sample(index_i,min(min_size,length(index_i)) )
-      sample_global_dist<-Dist(global_umap_embedding[sample_index_i,])
-      #sample_global_dist<-as.matrix(parDist(global_umap_embedding[sample_index_i,]))
-      sample_local_dist<-Dist(umap_embedding[sample_index_i,])
-      #sample_local_dist<-as.matrix(parDist(umap_embedding[sample_index_i,]))
-      mean(c(sample_global_dist))/mean(c(sample_local_dist))
-    })
-    for(i in 1:N_label){
-      index_i<-which(cluster_ == label_index[i])
-      cur_umap<-umap_embedding[index_i,]
-      umap_embedding[index_i,]<-t((t(cur_umap)-as.numeric(colMeans(cur_umap)))*min(3,prop_density[i])+as.numeric(colMeans(cur_umap)))
-    }
-  }else if (density_adjust & is.null(global_umap_embedding)){
-    for(j in 1:length(main_index)){
-      i<-main_index[j]
-      index_i<-which(cluster_ == label_index[i])
-      cur_umap<-umap_embedding[index_i,]
-      cur_sf_here<-1.5
-      umap_embedding[index_i,]<-t((t(cur_umap)-as.numeric(colMeans(cur_umap)))*cur_sf_here+as.numeric(colMeans(cur_umap)))
-    }
-  }
-
-  pca_center<-t(sapply(1:N_label, function(i){
-    index_i<-which(cluster_ == label_index[i])
-    colMeans(as.matrix(pca_embedding[index_i,]))
-  }))
-
-
-  pca_anchor_index<-lapply(1:N_label, function(i){
-    index_i<-which(cluster_ == label_index[i])
-    set.seed(seed.use)
-    sample_index_i<-sample(index_i,min(min_size,length(index_i)) )
-    sample_index_dist<-pdist(pca_embedding[sample_index_i,c(1,2)],pca_center[i,c(1,2)])@dist
-    savis_nth(x=sample_index_dist,
-      k = max(1,min(ceiling(min_size/5),length(index_i))))
-  })
-  pca_dist1<-Dist(pca_center)
-  #pca_dist1<-as.matrix(parDist(pca_center))
-
-  pca_dist2<-pca_dist1
-  pca_dist_main<-pca_dist1[main_index,main_index]
-
-  if(shrink_distance){
-    remain_index<-c(1:N_label)[which(!c(1:N_label)%in%main_index)]
-    #prop_<-sqrt(exp(cluster_size/max(cluster_size))/
-    #    max(exp(cluster_size/max(cluster_size))))
-    prop_<-sqrt(exp(cluster_size/max(cluster_size))/
-        mean(exp(cluster_size/max(cluster_size))[main_index]))
-    for(i in remain_index){
-      pca_dist1[remain_index,i]<-pca_dist1[remain_index,i]*prop_[i]
-      pca_dist1[i,remain_index]<-pca_dist1[i,remain_index]*prop_[i]
-      #pca_dist1[main_index,i]<-pca_dist1[main_index,i]*prop_[i]
-      #pca_dist1[i,main_index]<-pca_dist1[i,main_index]*prop_[i]
-      #pca_dist1[,i]<-pca_dist1[,i]*prop_[i]
-      #pca_dist1[i,]<-pca_dist1[i,]*prop_[i]
-    }
-    for(i in remain_index){
-      x<-main_index[which.min(pca_dist1[main_index,i])]
-      min_x<-min(pca_dist1[,i])*0.5
-      pca_dist1[x,i]<-min_x
-      pca_dist1[i,x]<-min_x
-    }
-  }
-  if(shrink_distance){
-    pam_res<-pam(x = pca_dist1,k = 2)
-
-    var_1<-sum(pca_center[which(pam_res$clustering==1),]^2)/sum(pam_res$clustering==1)
-    var_2<-sum(pca_center[which(pam_res$clustering==2),]^2)/sum(pam_res$clustering==2)
-
-    if(var_1 >= var_2){
-      clu1<-1
-      clu2<-2
-    }else{
-      clu1<-2
-      clu2<-1
-    }
-    index_clu1<-which(pam_res$clustering==clu1)
-    index_clu2<-which(pam_res$clustering==clu2)
-    for( i in index_clu1){
-      closed_dist<-min(pca_dist1[i,index_clu2])
-      pca_dist1[i,-i]<-pca_dist1[i,-i] - closed_dist*shrink_factor
-      if(sum(pca_dist1[i,-i]<0)>0){
-        index_neg<-which(pca_dist1[i,-i]<0)
-        pca_dist1[i,index_neg]<-min(pca_dist1[i,which(pca_dist1[i,]>0)])
-      }
-      pca_dist1[,i]<-pca_dist1[i,]
-    }
-  }
-
-  step1_res<-get_umap_embedding_adjust_tsMDS(
-    pca_embedding=pca_embedding,
-    pca_center=pca_center,
-    pca_anchor_index=pca_anchor_index,
-    pca_dist=pca_dist1,
-    pca_dist_main = pca_dist_main,
-    adjust_method = adjust_method,
-    main_index = main_index,
-    distance_metric=distance_metric,
-    umap_embedding=umap_embedding,
-    N_label=N_label,
-    cluster_ = cluster_,
-    label_index = label_index,
-    scale_factor =scale_factor,
-    rotate = rotate,
-    seed.use = seed.use)
-  umap_center<-step1_res$umap_center
-  umap_embedding_adjust<-step1_res$umap_embedding_adjust
-  snn_1<- FindNeighbors(object = umap_embedding_adjust,
-    nn.method = "rann",
-    verbose = F)$snn
-  cluster_1 <- FindClusters(snn_1,
-    resolution = 0,
-    verbose = F)[[1]]
-  cluster_1 <- as.numeric(as.character(cluster_1))
-
-  N_label1<-length(unique(cluster_1))
-  if (N_label1 < N_label){
-    ## First Adjustment
-    label_index1<-sort(unique(cluster_1))
-
-    bad_index<-list()
-    list_index<-0
-    for ( i in 1:N_label1){
-      index_i1<-which(cluster_1 == label_index1[i])
-      cur_index_len<-length(unique(cluster_[index_i1]))
-      if(cur_index_len > 1){
-        list_index<-list_index+1
-        bad_index[[list_index]]<-c(unique(cluster_[index_i1]))
-      }
-    }
-    for (i in 1:length(bad_index)){
-
-      pos<-min(bad_index[[i]])
-      other_pos<-bad_index[[i]][bad_index[[i]]>pos]
-      pos<-pos+1
-      other_pos<-other_pos+1
-      dist_vec<-pca_dist1[,pos]
-      all_pos<- dist_vec <= max(dist_vec[other_pos])
-      pca_dist1[all_pos,pos]<-min(dist_vec[dist_vec>=max(dist_vec[other_pos])])
-      pca_dist1[pos,all_pos]<-pca_dist1[all_pos,pos]
-    }
-    pca_dist<-as.dist(pca_dist1)
-    pca_dist1<-as.matrix(pca_dist)
-    step2_res<-get_umap_embedding_adjust_tsMDS(
-      pca_embedding=pca_embedding,
-      pca_center=pca_center,
-      pca_anchor_index=pca_anchor_index,
-      pca_dist=pca_dist1,
-      adjust_method = adjust_method,
-      main_index = main_index,
-      distance_metric=distance_metric,
-      umap_embedding=umap_embedding,
-      N_label=N_label,
-      cluster_ = cluster_,
-      label_index = label_index,
-      scale_factor =scale_factor,
-      rotate = rotate,
-      seed.use = seed.use)
-    umap_center<-step2_res$umap_center
-    umap_embedding_adjust<-step2_res$umap_embedding_adjust
-    snn_2<- FindNeighbors(object = umap_embedding_adjust,
-      nn.method = "rann",
-      verbose = F)$snn
-    cluster_2 <- FindClusters(snn_2,
-      resolution = 0,
-      verbose = F)[[1]]
-    cluster_2 <- as.numeric(as.character(cluster_2))
-
-    N_label2<-length(unique(cluster_2))
-    if(N_label2 < N_label){
-      ## Second Adjustment Push Away
-      label_index2<-sort(unique(cluster_2))
-
-      bad_index<-list()
-      list_index<-0
-      for ( i in 1:N_label2){
-        index_i2<-which(cluster_2 == label_index2[i])
-        cur_index_len<-length(unique(cluster_[index_i2]))
-        if(cur_index_len > 1){
-          list_index<-list_index+1
-          bad_index[[list_index]]<-c(unique(cluster_[index_i2]))
-        }
-      }
-      N_label3<-N_label - 1
-      cur_iter<-0
-      if(is.null(maxit_push)){
-        maxit_push<-max(10,N_label/3)
-      }
-      while (N_label3 < N_label & cur_iter < maxit_push) {
-        cur_iter<-cur_iter+1
-        for (i in 1:length(bad_index)){
-          pos<-min(bad_index[[i]])
-          other_pos<-bad_index[[i]][bad_index[[i]]>pos]
-          pos<-pos+1
-          other_pos<-other_pos+1
-          dist_mat<-pdist(umap_center[pos,],umap_center)@dist
-          target_distance<-min(dist_mat[dist_mat>max(dist_mat[other_pos])])
-          target_distance<-(target_distance+dist_mat[other_pos])/2
-          for (k in 1:length(other_pos)){
-            cur_pos<-other_pos[k]
-            cur_center<-umap_center[pos,]
-            cur_arrow<-umap_center[cur_pos,]
-            prop<-target_distance[k]/dist_mat[cur_pos]
-            cur_arrow<-(cur_arrow-cur_center)*prop+cur_center
-            index_i<-which(cluster_ == label_index[cur_pos])
-            umap_embedding_adjust[index_i,]<-t(t(umap_embedding_adjust[index_i,])-as.numeric(umap_center[cur_pos,])+as.numeric(cur_arrow))
-          }
-        }
-
-        snn_3<- FindNeighbors(object = umap_embedding_adjust,
-          nn.method = "rann",
-          verbose = F)$snn
-        cluster_3 <- FindClusters(snn_3,
-          resolution = 0,
-          verbose = F)[[1]]
-        cluster_3 <- as.numeric(as.character(cluster_3))
-        N_label3<-length(unique(cluster_3))
-        label_index3<-sort(unique(cluster_3))
-
-        bad_index<-list()
-        list_index<-0
-        for ( i in 1:N_label3){
-          index_i3<-which(cluster_3 == label_index3[i])
-          cur_index_len<-length(unique(cluster_[index_i3]))
-          if(cur_index_len > 1){
-            list_index<-list_index+1
-            bad_index[[list_index]]<-c(unique(cluster_[index_i3]))
-          }
-        }
-
-      }
-      if(N_label3 < N_label){
-        #if(verbose){
-        #  cat('\n')
-        #  print("Rescaling SAVIS...")
-        #  setTxtProgressBar(pb = pb, value = 19.5)
-        #}
-        ## Third Adjustment Rescale
-        for (i in 1:length(bad_index)){
-          pos<-min(bad_index[[i]])
-          other_pos<-bad_index[[i]][bad_index[[i]]>pos]
-          pos<-pos+1
-          other_pos<-other_pos+1
-          dist_mat<-pdist(umap_center[pos,],umap_center)@dist
-          target_distance<-min(dist_mat[dist_mat>=max(dist_mat[other_pos])])
-          re_sf<-target_distance/max(dist_mat[other_pos])
-
-          umap_embedding_adjust<-umap_embedding_adjust*re_sf
-        }
-      }
-
-    }
-  }
-  return(umap_embedding_adjust)
-}
-
-
-
-
-
-
 
 #' adjustUMAP
 #'
@@ -2313,42 +1632,7 @@ adjustUMAP<-function(
   min_size = 100,
   maxit_push = NULL
 ){
-  if(adjust_method == "all"){
-    umap_adjust<-adjustUMAP(
-      pca_embedding=pca_embedding,
-      umap_embedding=umap_embedding,
-      cluster_label = cluster_label,
-      global_umap_embedding=global_umap_embedding,
-      adjust_method = "umap",
-      distance_metric =distance_metric,
-      scale_factor = scale_factor,
-      rotate = rotate,
-      density_adjust = density_adjust,
-      #shrink_all_distance = shrink_all_distance,
-      shrink_distance = shrink_distance,
-      seed.use = seed.use,
-      min_size = min_size,
-      maxit_push = maxit_push
-    )
-    tsMDS_adjust<-adjustUMAP(
-      pca_embedding=pca_embedding,
-      umap_embedding=umap_embedding,
-      global_umap_embedding=global_umap_embedding,
-      adjust_method = "tsMDS",
-      distance_metric =distance_metric,
-      scale_factor = scale_factor,
-      rotate = rotate,
-      density_adjust = density_adjust,
-      #shrink_all_distance = shrink_all_distance,
-      shrink_distance = shrink_distance,
-      seed.use = seed.use,
-      min_size = min_size,
-      maxit_push = maxit_push
-    )
-    newList<-list("umap" = umap_adjust,
-      "tsMDS"=tsMDS_adjust)
-    return(newList)
-  }else if (adjust_method == "umap"|
+  if (adjust_method == "umap"|
       adjust_method == "Umap"|
       adjust_method == "UMAP"){
     umap_adjust<-adjustUMAP_via_umap(
@@ -2364,47 +1648,8 @@ adjustUMAP<-function(
       min_size = min_size,
       maxit_push = maxit_push)
     return(umap_adjust)
-  }else if(adjust_method == "MDS"|
-      adjust_method == "Mds"|
-      adjust_method == "mds"|
-      adjust_method == "tsMDS"|
-      adjust_method == "tsmds"|
-      adjust_method == "TSMDS"){
-    tsMDS_adjust<-adjustUMAP_via_tsMDS(
-      pca_embedding = pca_embedding,
-      umap_embedding = umap_embedding,
-      global_umap_embedding = global_umap_embedding,
-      distance_metric = distance_metric,
-      scale_factor = scale_factor,
-      rotate = rotate,
-      density_adjust = density_adjust,
-      shrink_distance = shrink_distance,
-      adjust_method = "tsMDS",
-      shrink_factor = shrink_factor,
-      seed.use = seed.use,
-      min_size = min_size,
-      maxit_push = maxit_push)
-    return(tsMDS_adjust)
-  }else if (adjust_method == "isoMDS"|
-      adjust_method == "ISOMDS"|
-      adjust_method == "isomds"){
-    tsMDS_adjust<-adjustUMAP_via_tsMDS(
-      pca_embedding = pca_embedding,
-      umap_embedding = umap_embedding,
-      global_umap_embedding = global_umap_embedding,
-      distance_metric = distance_metric,
-      scale_factor = scale_factor,
-      rotate = rotate,
-      density_adjust = density_adjust,
-      shrink_distance = shrink_distance,
-      adjust_method = "isoMDS",
-      shrink_factor = shrink_factor,
-      seed.use = seed.use,
-      min_size = min_size,
-      maxit_push = maxit_push)
-    return(tsMDS_adjust)
   }else{
-    print("Wrong adjust method!")
+    Stop("Wrong adjust method!")
     return(0)
   }
 }
@@ -2440,7 +1685,7 @@ ScaleFactor<-function(
   cluster_label,
   npcs=NULL,
   center_method = "mean",
-  scale_factor_separation =3,
+  sep_ratio =3,
   return_factor=TRUE){
 
   # sorted unique cluster label
@@ -2501,7 +1746,7 @@ ScaleFactor<-function(
   })
 
   scale_factor<-sapply(1:N_label, function(i){
-    min(cluster_center_dist[i,],na.rm = T)/scale_factor_separation/cluster_semi_d[i]
+    min(cluster_center_dist[i,],na.rm = T)/sep_ratio/cluster_semi_d[i]
   })
 
   for ( i in 1:N_label){
@@ -2660,7 +1905,7 @@ SubPCEmbedding<-function(
   hvg_method=NULL,
   return_hvg=FALSE,
   verbose = FALSE
-  #  process_min_size = 0
+  #  min_process_size = 0
 ){
   # get unique cluster label
   label_index<-sort(as.numeric(
@@ -2674,7 +1919,7 @@ SubPCEmbedding<-function(
   hvg_name_list<-list()
   for ( i in c(1:N_label)){
     index_i<-which(cluster_label == label_index[i])
-    #if(length(index_i) > process_min_size){
+    #if(length(index_i) > min_process_size){
     if (verbose){
       print(paste0("Process cluster ",
         label_index[i]," Yes",
@@ -2805,7 +2050,7 @@ FormCombinedEmbedding<-function(
   nfeatures,
   hvg_method = NULL,
   center_method = "mean",
-  scale_factor_separation=3
+  sep_ratio=3
 ){
   sub_PC_list<-SubPCEmbedding(
     expr_matrix = expr_matrix,
@@ -2822,7 +2067,7 @@ FormCombinedEmbedding<-function(
     cluster_label = cluster_label,
     npcs = npcs,
     center_method = center_method,
-    scale_factor_separation = scale_factor_separation)$combined_embedding
+    sep_ratio = sep_ratio)$combined_embedding
   combined_embedding<-as.matrix(combined_embedding)
   return(combined_embedding)
 }
@@ -2847,14 +2092,14 @@ FormCombinedEmbedding<-function(
 FormAdaptiveCombineList<-function(
   expr_matrix,
   expr_matrix_pca,
-  max_stratification,
+  max_depth,
   stratification_count,
-  scale_factor_separation,
+  sep_ratio,
   resolution,
   cluster_method,
   npcs,
   nfeatures,
-  process_min_size,
+  min_process_size,
   hvg_method = NULL,
   differentail_gene_cutoff = 20,
   do_cluster = TRUE,
@@ -2863,7 +2108,7 @@ FormAdaptiveCombineList<-function(
   verbose = FALSE
 ){
   colnames(expr_matrix_pca)<-paste0("Layer",stratification_count,"PC",1:npcs)
-  if(nrow(expr_matrix_pca) < process_min_size){
+  if(nrow(expr_matrix_pca) < min_process_size){
     newList<-list("cluster_label"= -1,
       "combined_embedding"=expr_matrix_pca)
     return(newList)
@@ -2982,9 +2227,9 @@ FormAdaptiveCombineList<-function(
     npcs=npcs,
     nfeatures=nfeatures,
     hvg_method = hvg_method,
-    scale_factor_separation=scale_factor_separation
+    sep_ratio=sep_ratio
   )
-  if(max_stratification == stratification_count + 1){
+  if(max_depth == stratification_count + 1){
     newList<-list("cluster_label"= cluster_label,
       "combined_embedding"=combined_embedding)
     return(newList)
@@ -3001,14 +2246,14 @@ FormAdaptiveCombineList<-function(
     tmp<-FormAdaptiveCombineList(
       expr_matrix = expr_matrix[,index_i],
       expr_matrix_pca = combined_embedding[index_i,(npcs+1):(2*npcs)],
-      max_stratification = max_stratification,
+      max_depth = max_depth,
       stratification_count = stratification_count + 1,
-      scale_factor_separation = scale_factor_separation,
+      sep_ratio = sep_ratio,
       resolution = resolution,
       cluster_method = cluster_method,
       npcs = npcs,
       nfeatures = nfeatures,
-      process_min_size = process_min_size,
+      min_process_size = min_process_size,
       hvg_method = hvg_method,
       check_differential = check_differential,
       verbose = verbose
@@ -3289,10 +2534,10 @@ adaDimPlot<-function(
   if(inherits(x = object, 'Seurat')){
     if(is.null(slot)){
       sv<-object@reductions$savis@cell.embeddings
-    }else if(slot == "tsMDS"){
-      sv<-object@reductions$savis@cell.embeddings.tsMDS.adjust
-    }else if(slot == "umap"){
-      sv<-object@reductions$savis@cell.embeddings.umap.adjust
+    }else if(slot%in% names(object@reductions)){
+      sv<-object@reductions[[slot]]@cell.embeddings
+    }else{
+      stop("slot name is not contained in object")
     }
   }else{
     sv<-as.matrix(object)
