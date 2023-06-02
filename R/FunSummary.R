@@ -7,7 +7,7 @@ pacman::p_load(Seurat,uwot,MASS,cluster,mixhvg,ggplot2,dplyr,Rfast,mize,glue,pdi
 #' @details This function argument to the function
 #'
 #' @param expr_matrix The expression COUNT matrix: gene(feature) as row; cell(sample) as column.
-#' @param npcs The number of principle components will be computed as the initialization input of nonlinear low dimensional embeddings. Default is 20.
+#' @param npcs The number of principle components will be computed as the initialization input of nonlinear low dimensional embeddings. Default is 30.
 #' @param nfeatures The number of highly variable genes will be selected. Default is 2000.
 #' @param hvg_method High Variable Gene Selection Method. Refer to manual of package 'mixhvg' and its function FindVariableFeaturesMix.
 #' @param distance_metric The default is "euclidean". Recommend to use "euclidean" because we need to distinguish between global distance and local distance.
@@ -44,8 +44,6 @@ pacman::p_load(Seurat,uwot,MASS,cluster,mixhvg,ggplot2,dplyr,Rfast,mize,glue,pdi
 #' @importFrom Seurat NormalizeData FindVariableFeatures ScaleData RunPCA DefaultAssay
 #' @importFrom utils setTxtProgressBar txtProgressBar
 #' @importFrom uwot umap
-#' @importFrom MASS isoMDS
-#' @importFrom cluster pam
 #' @importFrom mixhvg FindVariableFeaturesMix
 #' @import ggplot2
 #' @import RColorBrewer
@@ -124,17 +122,17 @@ savis<-function(
     rownames(expr_matrix)<-make.unique(rownames(expr_matrix))
   }
   if(verbose){
-    cat('\n')
     print("Normalizing Expression Matrix...")
     pb <- txtProgressBar(min = 0, max = 20, style = 3, file = stderr())
+    cat('\n')
   }
   expr_matrix_process<-NormalizeData(
     expr_matrix,
     verbose = verbose_more)
   if(verbose){
-    cat('\n')
     print("Finding Variable Features...")
     setTxtProgressBar(pb = pb, value = 1)
+    cat('\n')
   }
   if(is.null(hvg_method)){
     hvg<-FindVariableFeaturesMix(expr_matrix,
@@ -146,9 +144,9 @@ savis<-function(
   expr_matrix_process<-expr_matrix_process[hvg,]
 
   if(verbose){
-    cat('\n')
     print("Scaling Expression Matrix...")
     setTxtProgressBar(pb = pb, value = 2)
+    cat('\n')
   }
 
   expr_matrix_process <- ScaleData(
@@ -156,9 +154,9 @@ savis<-function(
     verbose = verbose_more)
 
   if(verbose){
-    cat('\n')
     print("Calculating Global PCA...")
     setTxtProgressBar(pb = pb, value = 3)
+    cat('\n')
   }
   suppressWarnings(expr_matrix_pca <- RunPCA(
     object = expr_matrix_process,
@@ -169,9 +167,9 @@ savis<-function(
   #expr_matrix_pca<-data.frame(expr_matrix_pca)
   expr_matrix_pca<-as.matrix(expr_matrix_pca)
   if(verbose){
-    cat('\n')
     print("Doing Clustering...")
     setTxtProgressBar(pb = pb, value = 5)
+    cat('\n')
   }
   cluster_label<-DoCluster(
     pc_embedding = expr_matrix_pca,
@@ -190,20 +188,22 @@ savis<-function(
       sum(cluster_label == label_index[i]))
   }
   if(verbose){
-    cat('\n')
     print(paste0("Clustering Results:",
       length(unique(cluster_label)),
       " clusters."))
     setTxtProgressBar(pb = pb, value = 6)
+    cat('\n')
   }
   if(verbose){
-    cat('\n')
-    print(paste0("Size of Cluster: ",size_cluster))}
+    print(paste0("Size of Cluster: ",size_cluster))
+  }
+    
 
   if(verbose){
-    cat('\n')
     print("Calculating Local PCA...")
-    setTxtProgressBar(pb = pb, value = 8)}
+    setTxtProgressBar(pb = pb, value = 8)
+    cat('\n')
+  }
 
   if(max_depth == 2 | adaptive == FALSE){
 
@@ -221,16 +221,12 @@ savis<-function(
   if(adaptive){
     if(is.null(min_process_size)){min_process_size<-2*npcs}
     if(verbose){
-      cat('\n')
       print(paste0("min_process_size: ",min_process_size))
       setTxtProgressBar(pb = pb, value = 9.5)
-    }
-
-
-    if(verbose){
       cat('\n')
       print("Exploring if clusters can be separated further...")
       setTxtProgressBar(pb = pb, value = 10)
+      cat('\n')
     }
 
     umap_res<-FormAdaptiveCombineList(
@@ -320,9 +316,9 @@ savis<-function(
     }
   }
   if(verbose){
-    cat('\n')
     print("Running Adaptive UMAP...")
     setTxtProgressBar(pb = pb, value = 12)
+    cat('\n')
   }
   #print(metric_count)
   umap_embedding<-RunAdaUMAP(
@@ -332,9 +328,9 @@ savis<-function(
     seed.use = seed.use)
   if(adjust_SAVIS){
     if(verbose){
-      cat('\n')
       print("Adjusting UMAP...")
       setTxtProgressBar(pb = pb, value = 17)
+      cat('\n')
     }
     expr_matrix_umap = NULL
     if(adjust_density_via_global_umap){
@@ -365,9 +361,9 @@ savis<-function(
                 "cluster_label"=cluster_label)
   
   if(verbose){
-    cat('\n')
     print("Finished...")
     setTxtProgressBar(pb = pb, value = 20)
+    cat('\n')
   }
   return(newList)
 }
@@ -424,8 +420,10 @@ RunPreSAVIS<-function(
   verbose_more = FALSE
 ){
   default_assay<-DefaultAssay(object)
-  print(paste0("PreSAVIS is based on the default assay: ",default_assay))
-  if(verbose){pb<-txtProgressBar(min = 0,max = 10,style = 3,file = stderr())}
+  if(verbose){
+    print(paste0("PreSAVIS is based on the default assay: ",default_assay)) 
+    pb<-txtProgressBar(min = 0,max = 10,style = 3,file = stderr())
+  }
   nfeatures<-length(VariableFeatures(object))
   npcs<-ncol(object@reductions$pca@cell.embeddings)
 
@@ -436,16 +434,16 @@ RunPreSAVIS<-function(
   }
 
   if(verbose){
-    cat('\n')
     print("Global PCs are captured from SeuratObject...")
     setTxtProgressBar(pb = pb, value = 1)
+    cat('\n')
   }
   expr_matrix_pca <- object@reductions$pca@cell.embeddings
   expr_matrix_pca<-as.matrix(expr_matrix_pca)
   if(verbose){
-    cat('\n')
     print("Doing Clustering...")
     setTxtProgressBar(pb = pb, value = 2)
+    cat('\n')
   }
   cluster_label<-DoCluster(
     pc_embedding = expr_matrix_pca,
@@ -464,21 +462,21 @@ RunPreSAVIS<-function(
       sum(cluster_label == label_index[i]))
   }
   if(verbose){
-    cat('\n')
     print(paste0("Clustering Results:",
       length(unique(cluster_label)),
       " clusters."))
     setTxtProgressBar(pb = pb, value = 3)
+    cat('\n')
   }
   if(verbose){
-    cat('\n')
     print(paste0("Size of Cluster: ",size_cluster))
+    cat('\n')
   }
 
   if(verbose){
-    cat('\n')
     print("Calculating Local PCA...")
     setTxtProgressBar(pb = pb, value = 4)
+    cat('\n')
   }
   if(max_depth == 2 | adaptive == FALSE){
 
@@ -496,16 +494,16 @@ RunPreSAVIS<-function(
   if(adaptive){
     if (is.null(min_process_size)){min_process_size<-2*npcs}
     if(verbose){
-      cat('\n')
       print(paste0("min_process_size: ",min_process_size))
       setTxtProgressBar(pb = pb, value = 5)
+      cat('\n')
     }
 
 
     if(verbose){
-      cat('\n')
       print("Exploring if clusters can be separated further...")
       setTxtProgressBar(pb = pb, value = 7)
+      cat('\n')
     }
 
 
@@ -590,9 +588,9 @@ RunPreSAVIS<-function(
   object@reductions$savis<-savis_pre
 
   if(verbose){
-    cat('\n')
     print("Finished...")
     setTxtProgressBar(pb = pb, value = 10)}
+    cat('\n')
   return(object)
 }
 
@@ -635,6 +633,7 @@ RunSAVIS<-function(
   adjust_rotate = TRUE,
   shrink_distance = TRUE,
   adjust_density = TRUE,
+  adjust_density_via_global_umap = TRUE,
   adjust_density_scale_ratio =0.8,
   verbose = TRUE,
   runSAVIS = TRUE,
@@ -651,7 +650,7 @@ RunSAVIS<-function(
   if(is.null(object@reductions$savis)){
     stop("Please apply RunPreSAVIS before RunSAVIS")
   }
-  if(!is.null(object@reductions$umap)){
+  if(adjust_density_via_global_umap & !is.null(object@reductions$umap)){
     adjust_density_via_global_umap<-TRUE
   }else{
     adjust_density_via_global_umap<-FALSE
@@ -662,9 +661,9 @@ RunSAVIS<-function(
   }
   
   if(verbose){
-    cat('\n')
     print("Running SAVIS with Adaptive Settings...")
     setTxtProgressBar(pb = pb, value = 3)
+    cat('\n')
   }
   #print(metric_count)
   if(runSAVIS){
@@ -673,14 +672,13 @@ RunSAVIS<-function(
       metric = object@reductions$savis@distance_metric,
       metric_count = object@reductions$savis@metric_count,
       seed.use = seed.use)
-    savis_embedding1<<-savis_embedding
     object@reductions$savis@savis_embedding<-savis_embedding
   }
   if(adjust_SAVIS){
     if(verbose){
-      cat('\n')
       print("Adjusting SAVIS...")
       setTxtProgressBar(pb = pb, value = 8)
+      cat('\n')
     }
     expr_matrix_umap = NULL
     if(adjust_density_via_global_umap){
@@ -701,9 +699,9 @@ RunSAVIS<-function(
   object@reductions$savis@cell.embeddings<-savis_embedding
   
   if(verbose){
-    cat('\n')
     print("Finished...")
     setTxtProgressBar(pb = pb, value = 10)
+    cat('\n')
   }
   return(object)
 }
@@ -1477,11 +1475,7 @@ adjustUMAP_via_umap<-function(
     }
 
     if(N_label_1 < length(main_index)){
-      #if(verbose){
-      #  cat('\n')
-      #  print("Rescaling SAVIS...")
-      #  setTxtProgressBar(pb = pb, value = 19.5)
-      #}
+      
       ## Third Adjustment Rescale
       for (i in 1:length(bad_index)){
         pos<-min(bad_index[[i]])
@@ -1596,7 +1590,6 @@ adjustUMAP_via_umap<-function(
 #' @importFrom Seurat FindNeighbors FindClusters
 #' @importFrom pdist pdist
 #' @importFrom uwot umap
-#' @importFrom MASS isoMDS
 #' @importFrom stats cmdscale var as.dist dist
 #'
 #' @export
@@ -2605,3 +2598,172 @@ SeuratLPCA<-function(expr_matrix,
   expr_matrix_pca<-as.matrix(expr_matrix_pca)
   return(expr_matrix_pca)
 }
+
+
+library(Seurat)
+library(mixhvg)
+
+#' savishvg
+#'
+#' savis with mixhvg idea 
+#'
+#' @details This function argument to the function
+#'
+#' @param expr_matrix The expression COUNT matrix: gene(feature) as row; cell(sample) as column.
+#' @param npcs The number of principle components will be computed as the initialization input of nonlinear low dimensional embeddings. Default is 30.
+#' @param nfeatures The number of highly variable genes will be selected. Default is 2000.
+#' @param hvg_method High Variable Gene Selection Method. Refer to manual of package 'mixhvg' and its function FindVariableFeaturesMix.
+#'
+#'
+#'
+#'
+#'
+#'
+#' @return nothing useful
+#'
+#' @importFrom Seurat NormalizeData FindVariableFeatures ScaleData RunPCA DefaultAssay
+#' @importFrom mixhvg FindVariableFeaturesMix
+#'
+#' @export
+#'
+#' @examples
+#' a<-1
+#'
+#'
+FindVariableFeaturesSAVIS<-function(object,
+                                    method.names = c("scran","scran_pos","seuratv1"),
+                                    nfeatures = 4000,
+                                    loess.span = 0.3,
+                                    clip.max = "auto",
+                                    num.bin = 20,
+                                    binning.method = "equal_width",
+                                    verbose = FALSE,
+                                    npcs = 30,
+                                    resolution = 0.1,
+                                    subratio = 0.5){
+  allfeatures<-rownames(object)
+  ncell<-ncol(object)
+  if (nrow(object) < nfeatures/2){
+    stop("nfeatures should be smaller than
+      the number of features in expression matrix")
+  }
+  if (ncol(object) < npcs){
+    stop("npcs(number of PC) should be smaller
+      than the number of samples in expression matrix")
+  }
+  if(is.null(rownames(object)[1])){
+    rownames(object)<-c(1:nrow(object))
+  }
+  if(is.null(colnames(object)[1])){
+    colnames(object)<-c(1:ncol(object))
+  }else if(length(unique(colnames(object)))< ncol(object) ) {
+    print("WARN: There are duplicated cell names! Make cell names unique by renaming!")
+    colnames(object)<-make.unique(colnames(object))
+  }else if(length(unique(rownames(object)))< nrow(object) ) {
+    print("WARN: There are duplicated gene names! Make gene names unique by renaming!")
+    rownames(object)<-make.unique(rownames(object))
+  }
+  if(inherits(x = object, 'Seurat')){
+    res_return<-"Return Object"
+    counts<-object@assays[[DefaultAssay(object)]]@counts
+    if(nrow(counts)==0){counts<-NULL}
+  }else if(inherits(x = object, 'Matrix') | inherits(x = object, 'matrix')){
+    if (!inherits(x = object, what = 'dgCMatrix')) {
+      object <- as(object = object, Class = 'dgCMatrix')
+    }
+    res_return<-"Return Features"
+    counts<-object
+  }else{
+    stop("Input only accept SeuratObject or matrix(including sparse)!")
+  }
+  # Find Global Highly Variable Genes 
+  if(res_return == "Return Features"){
+    hvg_global<-FindVariableFeaturesMix(counts,method.names,nfeatures,loess.span,
+                                        clip.max,num.bin,binning.method,verbose)
+    # Perform Clustering based on Global HVGs induced PCs
+    counts_process<-NormalizeData(counts,verbose = verbose)
+    counts_process<-counts_process[hvg_global[1:floor(nfeatures/2)],]
+    counts_process <- ScaleData(counts_process,verbose = verbose)
+    suppressWarnings(pca_embedding <- RunPCA(
+      object = counts_process,
+      features = rownames(counts_process),
+      npcs = npcs,
+      verbose = verbose)@cell.embeddings)
+    rm(counts_process)
+    pca_embedding<-as.matrix(pca_embedding)
+    snn_<- FindNeighbors(object = pca_embedding,
+                         nn.method = "rann",
+                         verbose = verbose)$snn
+    cluster_label <- FindClusters(snn_,
+                                  resolution = resolution,
+                                  verbose = verbose)[[1]]
+    cluster_label <- as.numeric(as.character(cluster_label))
+    label_index<-sort(unique(cluster_label))
+    N_label<-length(label_index)
+    size_cluster<-sapply(1:N_label, function(i){
+      sum(cluster_label == label_index[i])})   
+  }else if (res_return == "Return Object"){
+    object<-NormalizeData(object,verbose = verbose)
+    object<-FindVariableFeaturesMix(object,method.names,nfeatures,loess.span,
+                                    clip.max,num.bin,binning.method,verbose)
+    hvg_global<-VariableFeatures(object)
+    # Perform Clustering based on Global HVGs induced PCs
+    object <- ScaleData(object,verbose = verbose)
+    suppressWarnings(object <- RunPCA(
+      object = object,
+      features = hvg_global[1:floor(nfeatures/2)],
+      npcs = npcs,
+      verbose = verbose))
+    pca_embedding<-as.matrix(object@reductions$pca@cell.embeddings)
+    snn_<- FindNeighbors(object = pca_embedding,
+                         nn.method = "rann",
+                         verbose = verbose)$snn
+    cluster_label <- FindClusters(snn_,
+                                  resolution = resolution,
+                                  verbose = verbose)[[1]]
+    cluster_label <- as.numeric(as.character(cluster_label))
+    label_index<-sort(unique(cluster_label))
+    N_label<-length(label_index)
+    size_cluster<-sapply(1:N_label, function(i){
+      sum(cluster_label == label_index[i])})   
+  }
+  
+  feature_rank0<-rep(nrow(counts),nrow(counts))
+  names(feature_rank0)<-allfeatures
+  input_lst_subhvg<-list()
+  for(i in 1:N_label){
+    hvg_sub<-FindVariableFeaturesMix(counts[,cluster_label==label_index[i]],
+                                     method.names,nfeatures,loess.span,
+                                     clip.max,num.bin,binning.method,verbose)
+    feature_rank<-feature_rank0
+    feature_rank[hvg_sub]<-c(1:nfeatures)
+    #feature_rank[feature_rank<'Inf']<-feature_rank[feature_rank<'Inf']*ncell/size_cluster[i]
+    feature_rank<-feature_rank*min(size_cluster)/size_cluster[i]
+    input_lst_subhvg[[i]]<-feature_rank
+  }
+  
+  feature_rank_sub<-apply(matrix(unlist(input_lst_subhvg),
+                                 ncol=length(input_lst_subhvg),byrow = FALSE),1,FUN = min)
+  feature_rank_sub<-order(order(feature_rank_sub,decreasing = FALSE))
+  feature_rank_global<-feature_rank0
+  feature_rank_global[hvg_global]<-c(1:nfeatures)
+  
+  #feature_rank_sub[feature_rank_sub<'Inf']<-feature_rank_sub[feature_rank_sub<'Inf']/subratio
+  #feature_rank_global[feature_rank_global<'Inf']<-feature_rank_global[feature_rank_global<'Inf']/(1-subratio)
+  feature_rank_sub<-feature_rank_sub/subratio
+  feature_rank_global<-feature_rank_global/(1-subratio)
+  input_lst_final<-list(feature_rank_global,feature_rank_sub)
+  feature_rank_final<-apply(matrix(unlist(input_lst_final),
+                                   ncol=length(input_lst_final),byrow = FALSE),1,FUN = min)
+  if (res_return == "Return Object"){
+    VariableFeatures(object)<-allfeatures[order(feature_rank_final,decreasing = FALSE)[1:nfeatures]]
+    object$cluster_label<-cluster_label
+    return(object)
+  }
+  if (res_return == "Return Features"){
+    return_list<-list("VariableFeatures"=allfeatures[order(feature_rank_final,decreasing = FALSE)[1:nfeatures]],
+                      "cluster_label"=cluster_label)
+    return(return_list)
+  }
+}
+
